@@ -1,0 +1,39 @@
+# Personal usage data — never sync across users
+metrics/protocol-adherence.tsv.local
+metrics/xy-incidents.local.md
+metrics/failure-modes.local.md
+metrics/improvement-backlog.local.md
+
+# OS / editor cruft
+.DS_Store
+*.swp
+*~
+
+# Local install artifacts
+.backup-*/
+*.harness-sample
+last_compact_marker.txt
+_meta/last_compact_marker.txt
+
+# User's actual settings — only ship the .sample
+settings.json
+
+# Logs and ephemeral state
+*.log
+projects/
+todos/
+sessions/
+ide/
+shell-snapshots/
+statsig/
+file-history/
+paste-cache/
+session-env/
+backups/
+cache/
+debug/
+plugins/
+history.jsonl
+mcp-needs-auth-cache.json
+.credentials*
+config.json

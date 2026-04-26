@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"✅ Harness v2 active. Read order: SYSTEM_INDEX.md → required protocols → project WORKSPACE_INDEX.md if present.\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PROMPT=$(jq -r '.prompt // \"\"' 2>/dev/null); if echo \"$PROMPT\" | grep -qiE \"refactor|implement|architect|migrate|debug|fix bug|redesign|build a\"; then jq -n '{hookSpecificOutput: {hookEventName: \"UserPromptSubmit\", additionalContext: \"[Harness reminder] This prompt suggests non-trivial work. Verify execution mode (standard/deep), consider plan-as-files per PLAN_SCHEMA, and read SYSTEM_INDEX.md if not already loaded.\"}}'; fi"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p ~/.claude/_meta && date -u +\"%Y-%m-%dT%H:%M:%SZ\" > ~/.claude/_meta/last_compact_marker.txt"
+          }
+        ]
+      }
+    ]
+  }
+}
