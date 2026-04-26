@@ -26,9 +26,11 @@ SUBAGENT_PROTOCOL.md
 VALIDATION_PROTOCOL.md
 COMPACT_PROTOCOL.md
 SELF_EVALUATION_PROTOCOL.md
+MIGRATION_PROTOCOL.md
 HANDOFF_SCHEMA.md
 PLAN_SCHEMA.md
 PROJECT_WORKSPACE_INDEX_TEMPLATE.md
+VERSION
 "
 
 REQUIRED_METRICS="
@@ -277,8 +279,11 @@ do_install() {
     install_file "metrics/${f}"
   done
 
-  # settings.json — never overwrite
+  # settings.json — never overwrite. The public repo ships settings.json.sample.
   local settings_src="${SOURCE_DIR}/settings.json"
+  if [ ! -f "$settings_src" ] && [ -f "${SOURCE_DIR}/settings.json.sample" ]; then
+    settings_src="${SOURCE_DIR}/settings.json.sample"
+  fi
   local settings_dst="${TARGET_DIR}/settings.json"
   if [ -f "$settings_src" ]; then
     if [ -f "$settings_dst" ]; then
