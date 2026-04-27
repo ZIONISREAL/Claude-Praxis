@@ -1,16 +1,47 @@
 # Claude-Praxis
 
-> The most systematic harness system for Claude Code.
+> **Token-efficient agent orchestration for Claude Code via thin dispatch + indexed loading.**
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-> ### 🆕 What's New in v1.2.0 (Latest)
->
-> - 🚀 **One-command update** — `~/.claude/install.sh --update` pulls the latest version from your registered source. New flags: `--check-version`, `--changelog`.
-> - 🪶 **~50% token reduction** — Thin-dispatch packet files (`SUBAGENT_PROTOCOL §11`) cut subagent prompt size from ~5K to ~50 tokens (measured). 5-tier `SYSTEM_INDEX` reduces minimal read set from 7 files to 3. `CLAUDE.md` slimmed from 121 to 38 lines.
-> - 📊 **Measured baseline** — Pre-v1.2 per-task overhead recorded at [`metrics/token-cost-baseline.md`](metrics/token-cost-baseline.md) so future versions claim evidence-based improvement.
->
-> [Full v1.2.0 release notes →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0 →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [CHANGELOG](CHANGELOG.md)
+---
+
+## 🔥 First Task (30 seconds)
+
+```bash
+git clone https://github.com/ZIONISREAL/Claude-Praxis ~/Claude-Praxis
+cd ~/Claude-Praxis && ./install.sh --from .
+```
+
+Now open Claude Code in any project and try a real task:
+
+> *"Refactor this module's error handling and verify tests still pass."*
+
+Praxis auto-classifies mode → writes plan-as-files → dispatches scoped subagents (sonnet, medium effort) → validates against the real objective → emits a closure token coupling the claim to evidence. **You audit, not babysit.**
+
+---
+
+## What You Get
+
+- **Mode-aware execution** — trivial tasks stay trivial; non-trivial tasks get plans, subagents, and validation
+- **Auditable meta-decisions** — every classification, dispatch, and closure leaves a file an outside reviewer can inspect
+- **~50% token-efficient** — measured per-task reduction vs naive inline-prompt patterns
+- **One-line updates** — `~/.claude/install.sh --update`
+
+---
+
+## Latest — v1.2.0
+
+| Metric | Before v1.2 | After v1.2 |
+|---|---|---|
+| Per-task overhead | ~12,000 tokens | ~5,000–6,000 tokens |
+| Subagent dispatch prompt | ~5,000 tokens | ~50 tokens |
+| Minimal protocol read set | 7 files | 3 files |
+| Update mechanism | manual git pull | `install.sh --update` |
+
+[v1.2.0 release notes](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [Benchmark methodology](metrics/token-cost-baseline.md) · [CHANGELOG](CHANGELOG.md)
+
+---
 
 The name comes from Greek **praxis** (πρᾶξις): disciplined practice, where theory becomes action. Code written is not the same thing as task done.
 

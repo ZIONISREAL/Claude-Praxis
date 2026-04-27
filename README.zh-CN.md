@@ -1,16 +1,47 @@
 # Claude-Praxis
 
-> 面向 Claude Code 的最系统化的 harness 系统。
+> **面向 Claude Code 的 token 高效代理编排：thin dispatch + 索引化加载。**
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-> ### 🆕 v1.2.0 最新更新（Latest）
->
-> - 🚀 **一行命令更新** —— `~/.claude/install.sh --update` 自动从注册源拉取最新版本。新增 flag：`--check-version`、`--changelog`。
-> - 🪶 **Token 消耗减少约 50%** —— Thin-dispatch packet 文件（`SUBAGENT_PROTOCOL §11`）将子代理 prompt 从 ~5K 压到 ~50 tokens（实测）。5 层 `SYSTEM_INDEX` 将最小读集从 7 文件减到 3 文件。`CLAUDE.md` 从 121 行瘦到 38 行。
-> - 📊 **基线已测量** —— v1.2 之前的每任务开销记录于 [`metrics/token-cost-baseline.md`](metrics/token-cost-baseline.md)，便于后续版本声明有证据支持的改进。
->
-> [完整 v1.2.0 release notes →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0 →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [CHANGELOG](CHANGELOG.md)
+---
+
+## 🔥 第一个任务（30 秒上手）
+
+```bash
+git clone https://github.com/ZIONISREAL/Claude-Praxis ~/Claude-Praxis
+cd ~/Claude-Praxis && ./install.sh --from .
+```
+
+在任意项目中打开 Claude Code，丢一个真实任务给它：
+
+> *"重构这个模块的错误处理逻辑，并验证测试仍能通过。"*
+
+Praxis 自动判定模式 → 写下 plan-as-files → 派发范围受限的子代理（sonnet、medium effort）→ 对照真实目标做验证 → 输出耦合证据的 closure token。**你审核，不必盯着。**
+
+---
+
+## 你能得到什么
+
+- **模式感知执行** —— 琐碎任务保持轻量；非琐碎任务自动获得 plan、subagent、验证
+- **可审计的元决策** —— 每一次分类、派发、关闭都留下外部审阅者可检查的文件
+- **Token 高效约 50%** —— 实测的每任务开销低于"裸塞 prompt"模式
+- **一行更新** —— `~/.claude/install.sh --update`
+
+---
+
+## Latest — v1.2.0
+
+| 指标 | v1.2 之前 | v1.2 之后 |
+|---|---|---|
+| 每任务开销 | ~12,000 tokens | ~5,000–6,000 tokens |
+| 子代理派发 prompt | ~5,000 tokens | ~50 tokens |
+| 最小协议读集 | 7 文件 | 3 文件 |
+| 更新机制 | 手动 git pull | `install.sh --update` |
+
+[v1.2.0 release notes](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [Benchmark 方法论](metrics/token-cost-baseline.md) · [CHANGELOG](CHANGELOG.md)
+
+---
 
 该名称源于希腊语 **praxis**（πρᾶξις）：有纪律的实践，理论在此转化为行动。代码写完不等于任务完成。
 
