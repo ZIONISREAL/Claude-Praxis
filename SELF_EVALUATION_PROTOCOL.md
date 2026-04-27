@@ -30,6 +30,10 @@ Append-mode. One entry per closed task.
 ```markdown
 ## <ISO-8601 UTC> — <plan-id or task name>
 
+### Closure Token
+
+[verbatim closure token from VALIDATION_PROTOCOL §11; required for standard / deep / recovery; "n/a — lightweight" otherwise]
+
 ### Objective Alignment
 - Stated request: ...
 - Inferred true objective: ...
@@ -44,8 +48,14 @@ Append-mode. One entry per closed task.
 - Non-code validation applied: yes | no | n/a
 
 ### Skipped Rules
-List any harness rule consciously skipped, with justification.
-- Rule: <id or quote>, reason: ...
+
+This section MUST be non-empty for standard, deep, and recovery mode tasks. A claim of zero skipped rules is treated as suspect by default — humans skip rules under real conditions; LLMs do too. Honest disclosure is preferred to false purity.
+
+Format (one entry per skip):
+
+- Rule: <constitutional article + short name, e.g. §X verification>, action: <skip | partial | deferred>, reason: <≤ 2 lines>, mitigation: <what compensates>
+
+If you genuinely believe nothing was skipped, write a single entry stating so AND list any rule whose application was minimal/perfunctory. Pure compliance is the rare exception, not the default.
 
 ### Anti-XY Findings
 - XY risk identified: yes | no

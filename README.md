@@ -1,14 +1,14 @@
 # Claude-Praxis
 
-> A constitutional execution harness for Claude Code.
+> The most systematic harness system for Claude Code.
 
-[简体中文](README.zh-CN.md)
+[English](README.md) · [简体中文](README.zh-CN.md)
+
+The name comes from Greek **praxis** (πρᾶξις): disciplined practice, where theory becomes action. Code written is not the same thing as task done.
 
 Claude-Praxis turns ad-hoc Claude Code sessions into structured, auditable, recoverable work. It adds a thin operating layer around Claude Code: goal framing, mode selection, durable planning, scoped subagents, validation evidence, and continuity across context compaction.
 
-The name comes from Greek **praxis** (πρᾶξις): disciplined practice, where theory becomes action. In this project, the theory is simple:
-
-**Code written is not the same thing as task done.**
+---
 
 ## Why This Exists
 
@@ -36,6 +36,152 @@ flowchart LR
   D --> H
 ```
 
+---
+
+## The Four Failure Modes Praxis Addresses
+
+These are not hypothetical edge cases. They are LLM-systemic patterns that appear in real Claude Code sessions. v1.1 was designed specifically to address them.
+
+### a) Mode Under-Classification Bias
+
+LLMs systematically prefer the lowest-overhead execution classification, biasing toward lightweight even when a task is non-trivial. The bias is asymmetric — agents almost never over-classify. The effect is predictable: plan-as-files is skipped, the validation ladder is never reached, and downstream drift accumulates without a traceable cause. The mode decision feels right in the moment; the evidence of its wrongness only appears later.
+
+### b) Validation Skip Under Completion Pressure
+
+As context fills or a task begins to feel "almost done," agents develop a strong wrap-up bias that bypasses the validation ladder. Completion claims arrive before evidence exists. This failure mode worsens specifically near context-window saturation, precisely the moment when the temptation to close out is highest and the capacity for careful review is lowest.
+
+### c) Constitutional Violation Invisibility
+
+Behavioral law is stated but unobserved. When an agent under pressure sidesteps a constitutional principle — skipping a plan file, eliding an anti-XY check — execution continues silently. The system has no signal to trigger correction. Drift accumulates unaudited. The problem is not that agents cannot follow rules; it is that nothing requires them to leave a trace when they do not.
+
+### d) Subagent Search-Scope Drift
+
+Subagents naturally expand scope when investigating, eroding the bounded-task discipline that makes decomposed work safe. This failure mode was addressed in v1.0 by placing search-scope responsibility on the dispatching main agent, not the subagent (see `SUBAGENT_PROTOCOL.md` §7). The main agent owns the boundaries; the subagent executes within them.
+
+---
+
+## Design Philosophy — Self-Attestation vs. Structural Artifacts
+
+Each failure mode above shares a root cause: **the harness asked the agent to comply, but never asked the agent to leave evidence of compliance.** Self-attestation under model pressure is unreliable. A disciplined-sounding completion message is not the same thing as disciplined execution.
+
+The fix is structural: every meta-decision must produce a file-backed artifact that an outside reviewer — the user, a future agent, an audit subagent — can inspect without asking.
+
+The v1.0 harness already applied this principle to *strategy* via plan-as-files. The v1.1 release extends it to *meta-decisions*: classification, closure, and constitutional adherence.
+
+```mermaid
+flowchart LR
+  A[Soft self-attestation] -->|v1.1 conversion| B[Hard structural artifact]
+  A1[Mode label in chat] --> B1[Mode-decision rubric file]
+  A2[Verbal completion] --> B2[Closure token + evidence file]
+  A3[Implicit principle] --> B3[Article-tagged action log]
+```
+
+---
+
+## v1.1 Mechanisms
+
+For each mechanism: the problem addressed, the chosen design, why this design over alternatives, and where the artifact lives.
+
+### 1B — Mode-Decision Rubric File
+
+**Addresses:** failure mode (a) — mode under-classification bias.
+
+**Mechanism:** Before taking any first action, standard / deep / recovery mode tasks must write a mode-decision file at `<repo>/.claude/_meta/mode-decisions/<plan-id>.md`, conforming to `MODE_DECISION_SCHEMA.md`. The schema contains a quantitative rubric: file count, tool-call estimate, domain count, production path exposure, multi-phase flag, and other measurable criteria. The classification decision is derived from these numbers, not from impressionistic judgment.
+
+**Why this over alternatives:** An adversarial "argue both sides" mechanism was considered — have the agent explicitly argue for a higher mode before accepting the lower one. This was rejected in favor of a quantitative rubric. The rubric is checkable post-hoc by any reviewer without knowing the original context. Argumentation is not.
+
+**Lightweight mode is exempt.** The zero-friction principle for trivial tasks is preserved. The rubric applies only when a formal mode is chosen.
+
+**Artifact location:** `<repo>/.claude/_meta/mode-decisions/<plan-id>.md`
+
+---
+
+### 2A — Closure Token
+
+**Addresses:** failure mode (b) — validation skip under completion pressure.
+
+**Mechanism:** A completion claim in standard / deep / recovery mode must include a closure token of the form:
+
+```
+[CLOSURE: plan=<plan-id> evidence=<path> last-line="<last non-empty line of evidence file>" at=<ISO-8601>]
+```
+
+The `last-line` field must contain the actual last non-empty line of the referenced evidence file. The message is syntactically incomplete — and therefore suspect — without it.
+
+**Why this over alternatives:** Discipline-level rules ("you must validate before claiming done") fail under completion pressure. They are also unverifiable: a rule-following message looks identical to a genuinely validated one. Format-level rules couple the claim and the evidence at the syntactic layer — the LLM cannot produce a valid closure token without also producing a valid evidence file, because the token includes a quoted fragment that must correspond to that file.
+
+**Lightweight mode emits a simple "done."** The closure token applies only to formalized work where plan-as-files is required.
+
+**Artifact location:** `<repo>/.claude/_meta/validation/closure-<plan-id>.md`
+
+---
+
+### 3A — Article-Tagged Action Log + Mandatory Non-Empty Skipped Rules
+
+**Addresses:** failure mode (c) — constitutional violation invisibility.
+
+**Mechanism (two parts):**
+
+1. Decision-class actions in `execution-log.md` must carry a constitutional-article tag. Example: `[§VIII subagent-law] dispatch sa-investigator-1 — bounded to /src/auth/`
+2. The `Skipped Rules` section in `SELF_EVALUATION_PROTOCOL.md` is mandatory non-empty for non-lightweight tasks. A claim of zero skipped rules is treated as suspect by default.
+
+**Why this over alternatives:** Two philosophically distinct responses exist to constitutional drift: enforcement (cage the agent) or observability (require the agent to leave a trace). Praxis chose observability. Enforcement makes daily work brittle and creates incentives to reclassify work as lightweight to escape the cage. Observability asks the agent to be honest about its own execution, which scales better and surfaces real failure patterns in `metrics/`.
+
+The forced-honesty rule on Skipped Rules counters what might be called the "false purity" failure mode. Humans skip rules under real conditions; LLMs do too. A self-evaluation with no skipped rules and no anomalies is not a sign of perfect execution — it is a sign of inattentive self-evaluation.
+
+**Artifact locations:** `<repo>/.claude/logs/execution-log.md`, `<repo>/.claude/validation/self-evaluation.md`
+
+---
+
+## Validation Evidence — How We Know v1.1 Works
+
+Praxis v1.1 was validated by applying the new rules to its own implementation. After the v1.1 mechanisms were installed, the implementing subagent (Sonnet 4.6, medium effort) returned an honest assessment that included a known evasion path on the closure token: a dishonest agent can fabricate the `last-line` value without actually reading the evidence file.
+
+This honest disclosure is itself the v1.1 system working. By the new rules, the `Skipped Rules` section of `SELF_EVALUATION_PROTOCOL.md` must be non-empty, and false purity is suspect by default. The subagent surfaced the limitation rather than hiding it — which is the behavior the harness was designed to produce.
+
+The actual closure token from the v1.1 batch 1 release:
+
+```
+[CLOSURE: plan=plan-praxis-v11-batch1-v001 evidence=_meta/validation/closure-praxis-v11-batch1-v001.md last-line="praxis-v11-batch1-closed-2026-04-27" at=2026-04-27T08:47:02Z]
+```
+
+---
+
+## Roadmap — The Optimization Path Forward
+
+Each next batch is gated on observed v1.1 task data accumulating in `metrics/`. The harness should not evolve faster than evidence supports.
+
+### Next: 3D — Phase-Boundary Audit Subagent
+
+**Why first:** Directly addresses the closure-token forgeability identified in v1.1 batch 1 validation. An audit subagent dispatched at phase boundaries re-reads the referenced evidence file and verifies that the `last-line` value in the closure token actually matches the file's content. This closes the cryptographic gap that v1.1 leaves open.
+
+### Then: 2B — Two-Stage Close
+
+**Why next:** Separates "implementation-done" from "closure-done" as physically distinct artifacts — a closure-eligible message followed by a closure-done file. This adds deliberate friction and eliminates a class of premature-completion failures where the agent conflates finishing the code with finishing the task.
+
+### Then: 2C — Context-Budget Guardrail
+
+**Why third:** This mechanism requires either a hook with a context-utilization estimate or a Claude Code primitive not yet exposed to the harness layer. Deferred until the platform supports inspection of remaining context budget. Once available, this directly addresses failure mode (b) at the moment it is most acute.
+
+### Then: 1A — Quantitative Runtime Escalation
+
+**Why last:** The rubric file (1B) combined with standard mode-monitoring already catches under-classification at task start. Runtime auto-escalation is additive — useful, but not the dominant gap in the current failure profile.
+
+---
+
+## Honest Residual Risks
+
+v1.1 narrows the gap but does not close it. These limitations are documented here rather than buried.
+
+- **Closure-token forgeability.** The `last-line` value can be fabricated by a dishonest agent without opening the evidence file. This is undetectable without the audit subagent (3D), which does not yet exist.
+- **Mode-rubric estimation bias.** The quantitative rubric numbers (file count, tool count, domains) are agent-estimated. Estimation can itself be subject to the same downward bias the rubric was designed to correct. Mitigated by future runtime escalation (1A).
+- **Hooks are advisory.** A session that misses the SessionStart hook confirmation can proceed without the harness loaded. The hook signals non-compliance but does not prevent it.
+- **Article-tag accuracy is not validated.** An agent can mis-tag an action — marking `[§II goal-truth]` on an action governed by `§X verification]` — without triggering any error. The tag is a trace, not a proof.
+
+These are not bugs. They are the price of choosing observability over enforcement. The defenses against these residuals are accumulating evidence in `metrics/`, peer review via the future audit subagent (3D), and human inspection of the execution log.
+
+---
+
 ## Core Idea
 
 Claude-Praxis is not a prompt pack. It is a **governance layer** for agentic engineering work.
@@ -50,6 +196,8 @@ It separates four things that often get blurred in AI coding sessions:
 | Evidence | How do we know it worked? | Validation ladder and self-evaluation |
 
 The result is an agent that behaves less like a one-shot autocomplete loop and more like a careful engineering operator.
+
+---
 
 ## Architecture
 
@@ -69,6 +217,7 @@ flowchart TB
 
   Schemas --> Plan["PLAN_SCHEMA.md"]
   Schemas --> Handoff["HANDOFF_SCHEMA.md"]
+  Schemas --> ModeDecision["MODE_DECISION_SCHEMA.md"]
 
   Constitution --> Workspace["Project .claude/ workspace"]
   Plan --> Workspace
@@ -91,6 +240,7 @@ flowchart TB
 | `VALIDATION_PROTOCOL.md` | Evidence ladder for code and non-code deliverables |
 | `COMPACT_PROTOCOL.md` | Continuity before and after context compaction |
 | `SELF_EVALUATION_PROTOCOL.md` | Post-task audit for non-trivial work |
+| `MODE_DECISION_SCHEMA.md` | Quantitative rubric for mode classification; required artifact for standard/deep/recovery |
 | `PLAN_SCHEMA.md` | Versioned plan file schema |
 | `HANDOFF_SCHEMA.md` | Subagent task and result schema |
 | `PROJECT_STRUCTURE_SPEC.md` | Project-local `.claude/` workspace specification |
@@ -99,13 +249,15 @@ flowchart TB
 | `settings.json.sample` | Advisory hook sample for Claude Code settings |
 | `metrics/` | Optional aggregate records for protocol adherence and failure patterns |
 
+---
+
 ## Execution Modes
 
 Praxis avoids turning every request into a ceremony. Work is classified first.
 
 | Mode | Use when | Protocol overhead |
 |---|---|---|
-| `lightweight` | Trivial task: <=2 files, <=8 tool calls, single domain, no durable state needed | No plan file; direct work plus sanity check |
+| `lightweight` | Trivial task: ≤2 files, ≤8 tool calls, single domain, no durable state needed | No plan file; direct work plus sanity check |
 | `standard` | Ordinary non-trivial work | Plan-as-files, validation ladder, self-evaluation |
 | `deep` | Refactors, migrations, architecture decisions, multi-agent work, high risk | Full protocol, risk tracking, bounded subagents |
 | `recovery` | Drift detected: lost objective, skipped validation, broken plan state | Reconstruct objective and repair durable state |
@@ -128,6 +280,8 @@ stateDiagram-v2
   Validate --> SelfEvaluate
   SelfEvaluate --> Done
 ```
+
+---
 
 ## Project Workspace
 
@@ -153,27 +307,7 @@ For non-trivial work, Praxis creates or uses a project-local `.claude/` workspac
 
 This workspace is the durable substrate. Conversation is useful, but files are canonical.
 
-## Why This Is Better
-
-### 1. It Optimizes for the Real Goal
-
-Praxis forces the agent to distinguish the literal request from the likely objective. This reduces polished wrong answers: the system is allowed to challenge a bad framing before implementing it.
-
-### 2. It Survives Long Sessions
-
-Plans, decisions, assumptions, risks, rejected paths, validation results, and compact summaries are written to files. A future session can rehydrate from the project workspace instead of relying on fragile chat memory.
-
-### 3. It Makes Subagents Auditable
-
-Subagents receive bounded task packets and return structured results. The main agent remains responsible for integration, promotion into memory, and final judgment.
-
-### 4. It Separates Strategy From Tactics
-
-Claude Code's native TodoWrite is excellent for current-session steps. Praxis plan files are for cross-session strategy. `INTEGRATION.md` defines how both should coexist.
-
-### 5. It Makes Completion Evidence-Based
-
-The validation ladder prevents "implemented" from being confused with "done". For documentation and configuration tasks, `VALIDATION_PROTOCOL.md` includes a non-code validation branch.
+---
 
 ## Install
 
@@ -204,6 +338,8 @@ Check an existing install:
 
 Claude Code settings are user-specific. This repository ships `settings.json.sample`; merge its `hooks` into your `~/.claude/settings.json` if you want advisory hook signals.
 
+---
+
 ## Hook Philosophy
 
 Hooks are intentionally advisory. They make protocol adherence visible, but they do not block tool execution.
@@ -218,58 +354,16 @@ flowchart LR
 
 This matters because hard enforcement can make daily work brittle. Praxis aims for disciplined behavior without turning the tool into a cage.
 
-## Benchmark Proposal
+---
 
-Claude-Praxis is a workflow harness, so its performance should be measured by task outcomes rather than raw token speed.
+## Versioning and License
 
-### Suggested Benchmark Design
+Current version: see `VERSION` and `CHANGELOG.md`.
 
-Run the same task suite twice:
+License: MIT. See `LICENSE`.
 
-1. **Baseline**: Claude Code with no Praxis harness
-2. **Praxis**: Claude Code with Claude-Praxis installed
+---
 
-Use 20-40 representative tasks:
+## Credits
 
-| Task type | Example |
-|---|---|
-| Lightweight | Rename a field, adjust a config, update one doc |
-| Standard | Implement a small feature across 3-6 files |
-| Deep | Refactor a module, migrate an API, split a service |
-| Recovery | Resume after context compaction or failed validation |
-| Anti-XY | User asks for a surface fix where root cause differs |
-
-### Metrics
-
-| Metric | What it measures | Expected direction |
-|---|---|---|
-| First-pass success rate | Task works after the first completed attempt | Higher on standard/deep tasks |
-| Objective-fit score | Did the result solve the real problem, not just the literal request? | Higher |
-| Validation coverage | Was meaningful evidence produced before completion? | Much higher |
-| Context recovery time | Time to resume after compaction or session restart | Lower |
-| Rework rate | Number of follow-up fixes caused by missed assumptions | Lower |
-| Lightweight overhead | Extra time for trivial tasks | Near zero if mode classification works |
-| Token/tool overhead | Additional reads/writes caused by the harness | Higher on deep tasks, controlled on lightweight tasks |
-
-### Example Scorecard Template
-
-```text
-task_id,mode,baseline_success,praxis_success,baseline_minutes,praxis_minutes,
-baseline_validation_level,praxis_validation_level,rework_count,objective_fit_1_to_5
-```
-
-The likely tradeoff is intentional:
-
-- small tasks should remain nearly as fast as baseline
-- standard/deep tasks may spend more up front
-- complex tasks should repay that cost through fewer restarts, fewer missed assumptions, and better validation evidence
-
-## Status
-
-Current version: `1.0.1`
-
-See `VERSION` and `CHANGELOG.md`.
-
-## License
-
-MIT. See `LICENSE`.
+Designed and implemented through structured collaboration with Claude (Opus 4.7 orchestrator + Sonnet 4.6 subagents). The harness was used to build itself; see `_meta/plan-v001.md` and `_meta/plan-v002.md` for traceable plans of the system's own construction.

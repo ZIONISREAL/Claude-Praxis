@@ -18,6 +18,7 @@ For ordinary non-trivial tasks, read:
 - `EXECUTION_PROTOCOL.md`
 - `PROJECT_STRUCTURE_SPEC.md`
 - `PLAN_SCHEMA.md`
+- `MODE_DECISION_SCHEMA.md`
 - `VALIDATION_PROTOCOL.md`
 
 ## If the task involves subagents, also read

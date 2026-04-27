@@ -1,65 +1,213 @@
 # Claude-Praxis
 
-> 面向 Claude Code 的宪法式执行框架。
+> 面向 Claude Code 的最系统化的 harness 系统。
 
-[English](README.md)
+[English](README.md) · [简体中文](README.zh-CN.md)
 
-Claude-Praxis 把临时、一次性的 Claude Code 会话，转化为有结构、可审计、可恢复的工程执行过程。它不是替代 Claude Code，而是在 Claude Code 外面加上一层轻量操作系统：目标澄清、模式选择、文件化计划、受约束的子代理、验证证据，以及上下文压缩后的连续性。
+该名称源于希腊语 **praxis**（πρᾶξις）：有纪律的实践，理论在此转化为行动。代码写完不等于任务完成。
 
-Praxis 来自希腊语 **praxis** (πρᾶξις)，意思是有纪律的实践，也就是理论与行动的统一。在这个项目里，核心判断很简单：
+Claude-Praxis 将随意的 Claude Code 会话转化为结构化、可审计、可恢复的工作。它在 Claude Code 之上添加了一层轻薄的运作层：目标框定、模式选择、持久化规划、范围受限的子代理、验证证据，以及跨上下文压缩的连续性保障。
 
-**代码写完，不等于任务完成。**
+---
 
-## 为什么需要它
+## 为何存在
 
-Claude Code 已经很强。问题通常不在能力，而在真实工程环境里的执行纪律：
+Claude Code 本身已经很强大。问题不在于能力，而在于真实工作中的操作纪律：
 
-- 用户提出的需求常常只是症状，不是真正目标
-- 长会话在上下文压缩后容易丢失状态
-- 子代理如果没有边界，容易漂移或重复扫描
-- Agent 容易在证据不足时声称完成
-- 小任务应该保持轻量，大任务又必须有结构
+- 用户请求往往是症状，而非真实目标
+- 长会话在上下文压缩时会丢失状态
+- 子代理在没有边界约束的交接时容易漂移
+- 完成声明可能先于证据出现
+- 小任务应保持轻量，但大任务需要结构
 
-Claude-Praxis 补的是这层缺失的控制平面，并且尽量不重复 Claude Code 原生能力。
+Claude-Praxis 补充了缺失的控制层，而不取代 Claude Code 的原生工具。
 
 ```mermaid
 flowchart LR
-  A["用户请求"] --> B["Praxis 目标澄清"]
+  A["用户请求"] --> B["Praxis 框定"]
   B --> C{"执行模式"}
-  C -->|"lightweight"| D["直接执行 + 基础检查"]
-  C -->|"standard"| E["文件化计划 + 验证"]
-  C -->|"deep"| F["风险模型 + 子代理契约 + 完整证据"]
-  C -->|"recovery"| G["重建目标 + 修复状态"]
-  D --> H["可审计完成"]
-  E --> H
+  C -->|"轻量级"| D["直接行动 + 完整性检查"]
+  C -->|"标准"| E["计划即文件 + 验证"]
+  C -->|"深度"| F["风险模型 + 子代理契约 + 完整证据"]
+  C -->|"恢复"| G["重建目标 + 修复状态"]
+  E --> H["可审计的完成"]
   F --> H
   G --> H
+  D --> H
 ```
 
-## 核心思想
+---
 
-Claude-Praxis 不是提示词包，而是一个 **agent 工程治理层**。
+## Praxis 所解决的四类失效模式
 
-它把 AI 编程会话里经常混在一起的四件事拆开：
+这些不是假设性的边缘情况，而是在真实 Claude Code 会话中出现的 LLM 系统性规律。v1.1 专门针对这些问题进行了设计。
 
-| 层级 | 关键问题 | Praxis 的回答 |
+### a) 模式低估分类偏差
+
+LLM 系统性地倾向于选择开销最低的执行分类，即便任务并非简单，也会偏向轻量级模式。这种偏差是不对称的——代理几乎从不高估分类。其效果是可预见的：计划即文件被跳过，验证阶梯从未触达，下游漂移在无可追溯原因的情况下积累。模式决策在当下感觉正确；其错误的证据只在事后才显现。
+
+### b) 完成压力下的验证跳过
+
+随着上下文填满或任务感觉"即将完成"，代理会产生强烈的收尾偏差，绕过验证阶梯。完成声明先于证据出现。这种失效模式在上下文窗口接近饱和时尤为严重——正是想要收尾的冲动最强烈、仔细审查的能力最低的时刻。
+
+### c) 宪法违规的不可见性
+
+行为法律被声明但未被观测。当代理在压力下绕过宪法原则——跳过计划文件、省略反 XY 检查——执行会悄无声息地继续。系统没有信号来触发纠正。漂移在未经审计的情况下积累。问题不在于代理无法遵守规则，而在于没有任何机制要求它们在不遵守时留下痕迹。
+
+### d) 子代理搜索范围漂移
+
+子代理在调查时自然倾向于扩展范围，侵蚀使分解工作安全的边界纪律。这一失效模式在 v1.0 中已通过将搜索范围责任置于调度主代理（而非子代理）一侧来解决（参见 `SUBAGENT_PROTOCOL.md` §7）。主代理拥有边界；子代理在其内执行。
+
+---
+
+## 设计哲学——自我证明 vs. 结构性制品
+
+上述每种失效模式都有一个共同根本原因：**harness 要求代理遵守，却从未要求代理留下遵守的证据。** 在模型压力下的自我证明是不可靠的。听起来纪律严明的完成信息，与真正经过纪律性执行的完成，在表面上没有区别。
+
+修复方案是结构性的：每个元决策都必须生成一个文件支持的制品，外部审查者——用户、未来的代理、审计子代理——无需询问即可检查。
+
+v1.0 的 harness 已通过计划即文件将这一原则应用于*策略层*。v1.1 版本将其扩展至*元决策层*：分类决策、关闭声明和宪法遵循。
+
+```mermaid
+flowchart LR
+  A[软性自我证明] -->|v1.1 转换| B[硬性结构制品]
+  A1[对话中的模式标签] --> B1[模式决策量化文件]
+  A2[口头完成声明] --> B2[关闭令牌 + 证据文件]
+  A3[隐式原则] --> B3[条款标记的行动日志]
+```
+
+---
+
+## v1.1 机制
+
+针对每个机制：所解决的问题、所选设计方案、选择该方案而非备选方案的原因，以及制品存放位置。
+
+### 1B — 模式决策量化文件
+
+**解决：** 失效模式 (a)——模式低估分类偏差。
+
+**机制：** 在采取任何首个行动之前，标准 / 深度 / 恢复模式任务必须在 `<repo>/.claude/_meta/mode-decisions/<plan-id>.md` 写入一个模式决策文件，符合 `MODE_DECISION_SCHEMA.md` 规范。该 schema 包含一个量化标准：文件数量、工具调用估算、领域数量、生产路径暴露情况、多阶段标志以及其他可测量的标准。分类决策从这些数字推导，而非依靠印象性判断。
+
+**为何选择此方案而非备选：** 曾考虑过对抗性的"双方论证"机制——让代理在接受较低模式前明确论证更高模式。此方案被否决，转而支持量化标准。量化标准可由任何审查者在事后核实，无需了解原始上下文；而论证则无法如此。
+
+**轻量级模式豁免。** 对简单任务的零摩擦原则得以保留。量化标准仅适用于选择了正式模式的情况。
+
+**制品位置：** `<repo>/.claude/_meta/mode-decisions/<plan-id>.md`
+
+---
+
+### 2A — 关闭令牌
+
+**解决：** 失效模式 (b)——完成压力下的验证跳过。
+
+**机制：** 标准 / 深度 / 恢复模式中的完成声明必须包含如下形式的关闭令牌：
+
+```
+[CLOSURE: plan=<plan-id> evidence=<path> last-line="<证据文件最后一个非空行>" at=<ISO-8601>]
+```
+
+`last-line` 字段必须包含所引用证据文件的实际最后一个非空行。没有该字段，消息在语法上是不完整的——因此是可疑的。
+
+**为何选择此方案而非备选：** 纪律层面的规则（"声明完成前必须验证"）在完成压力下会失效。它们也无法核实：遵守规则的消息与真正经过验证的消息在外观上完全相同。格式层面的规则将声明与证据在语法层面耦合——LLM 不能在不生成有效证据文件的情况下产生有效的关闭令牌，因为令牌中包含必须对应该文件的引用片段。
+
+**轻量级模式直接输出"done"。** 关闭令牌仅适用于需要计划即文件的正式工作。
+
+**制品位置：** `<repo>/.claude/_meta/validation/closure-<plan-id>.md`
+
+---
+
+### 3A — 条款标记行动日志 + 强制非空跳过规则
+
+**解决：** 失效模式 (c)——宪法违规的不可见性。
+
+**机制（两个部分）：**
+
+1. `execution-log.md` 中的决策类行动必须携带宪法条款标记。示例：`[§VIII subagent-law] dispatch sa-investigator-1 — bounded to /src/auth/`
+2. `SELF_EVALUATION_PROTOCOL.md` 中的"跳过规则"部分对非轻量级任务强制为非空。声称零跳过规则在默认情况下被视为可疑。
+
+**为何选择此方案而非备选：** 对于宪法漂移，存在两种哲学上截然不同的应对方式：执行（囚禁代理）或可观测性（要求代理留下痕迹）。Praxis 选择了可观测性。执法使日常工作变得脆弱，并产生激励机制，促使代理将工作重新分类为轻量级以逃避约束。可观测性要求代理对自身执行诚实，这一方式更具可扩展性，并在 `metrics/` 中呈现真实的失效模式。
+
+跳过规则的强制诚实规则对抗"虚假纯洁"失效模式。人类在真实条件下会跳过规则；LLM 也是如此。没有跳过规则、没有异常的自我评估，并不是完美执行的标志——而是粗心自我评估的标志。
+
+**制品位置：** `<repo>/.claude/logs/execution-log.md`、`<repo>/.claude/validation/self-evaluation.md`
+
+---
+
+## 验证证据——我们如何知道 v1.1 有效
+
+Praxis v1.1 通过将新规则应用于其自身实现来进行验证。在 v1.1 机制安装完成后，实施子代理（Sonnet 4.6，中等努力程度）返回了一份诚实的评估，其中包含关闭令牌的一个已知规避路径：不诚实的代理可以在不实际读取证据文件的情况下伪造 `last-line` 值。
+
+这一诚实披露本身就是 v1.1 系统在发挥作用。根据新规则，`SELF_EVALUATION_PROTOCOL.md` 的"跳过规则"部分必须为非空，且默认情况下虚假纯洁是可疑的。子代理将这一局限性浮出水面而非隐藏——这正是 harness 被设计来产生的行为。
+
+v1.1 第一批次发布的实际关闭令牌：
+
+```
+[CLOSURE: plan=plan-praxis-v11-batch1-v001 evidence=_meta/validation/closure-praxis-v11-batch1-v001.md last-line="praxis-v11-batch1-closed-2026-04-27" at=2026-04-27T08:47:02Z]
+```
+
+---
+
+## 路线图——前进的优化路径
+
+每个后续批次都以 `metrics/` 中积累的 v1.1 任务数据为门控条件。harness 的演进速度不应超过证据所支持的速度。
+
+### 下一步：3D — 阶段边界审计子代理
+
+**为何优先：** 直接解决 v1.1 第一批次验证中发现的关闭令牌可伪造问题。在阶段边界调度的审计子代理会重新读取引用的证据文件，并验证关闭令牌中的 `last-line` 值是否与文件内容实际匹配。这填补了 v1.1 留下的密码学漏洞。
+
+### 然后：2B — 两阶段关闭
+
+**为何其次：** 将"实现完成"与"关闭完成"分离为物理上独立的制品——一个关闭资格消息，随后是一个关闭完成文件。这增加了刻意的摩擦，消除了一类代理将完成代码与完成任务混为一谈的过早完成失效。
+
+### 然后：2C — 上下文预算护栏
+
+**为何第三：** 该机制需要带有上下文利用率估计的钩子，或 Claude Code 尚未向 harness 层暴露的原生能力。推迟至平台支持对剩余上下文预算的检查后再实施。一旦可用，这将在失效模式 (b) 最为严重的时刻直接解决它。
+
+### 然后：1A — 量化运行时升级
+
+**为何最后：** 量化文件（1B）加上标准模式监控已在任务开始时捕获低估分类。运行时自动升级是附加的——有用，但不是当前失效模式中的主要缺口。
+
+---
+
+## 诚实的残余风险
+
+v1.1 缩小了差距但没有填平它。这些局限性记录于此，而非埋于细节之中。
+
+- **关闭令牌可伪造性。** `last-line` 值可由不诚实的代理在不打开证据文件的情况下伪造。在审计子代理（3D）存在之前，这一问题无法检测，而 3D 目前尚不存在。
+- **模式量化标准估算偏差。** 量化标准中的数字（文件数量、工具调用数量、领域数量）是代理估算的。估算本身可能受到与量化标准旨在纠正的相同向下偏差的影响。由未来的运行时升级（1A）缓解。
+- **钩子是建议性的。** 错过 SessionStart 钩子确认的会话可以在未加载 harness 的情况下继续。钩子发出不合规信号但不阻止它。
+- **条款标记准确性未经验证。** 代理可能错误标记行动——将 `[§II goal-truth]` 标记在受 `§X verification` 约束的行动上——而不触发任何错误。标记是痕迹，不是证明。
+
+这些不是缺陷，而是选择可观测性而非执法所付出的代价。针对这些残余风险的防御措施是：在 `metrics/` 中积累证据、通过未来审计子代理（3D）进行同行审查，以及对执行日志进行人工检查。
+
+---
+
+## 核心理念
+
+Claude-Praxis 不是提示词包，而是面向代理工程工作的**治理层**。
+
+它区分了 AI 编程会话中经常被混淆的四件事：
+
+| 层次 | 问题 | Praxis 的答案 |
 |---|---|---|
-| 意图 | 用户真正想达成什么？ | Anti-XY 审查与 objective modeling |
-| 策略 | 跨阶段、跨会话应该如何推进？ | 版本化 plan 文件 |
-| 执行 | 当前这一步应该做什么？ | Claude Code 原生工具、TodoWrite、Skills、MCP |
-| 证据 | 如何证明它真的完成了？ | 验证阶梯与自我审计 |
+| 意图 | 用户真正想实现什么？ | 反 XY 审查和目标建模 |
+| 策略 | 跨阶段或跨会话应该发生什么？ | 版本化计划文件 |
+| 执行 | 现在应该发生什么？ | Claude Code 原生工具、TodoWrite、Skills、MCP |
+| 证据 | 我们如何知道它有效？ | 验证阶梯和自我评估 |
 
-这样，Agent 不再只是一次性 autocomplete 循环，而更像一个谨慎的工程执行者。
+结果是一个行为更像谨慎工程操作员而非单次自动补全循环的代理。
+
+---
 
 ## 架构
 
 ```mermaid
 flowchart TB
-  Entry["CLAUDE.md<br/>全局入口"] --> Router["SYSTEM_INDEX.md<br/>上下文路由"]
-  Router --> Constitution["CONSTITUTION.md<br/>行为宪法"]
-  Router --> Protocols["执行协议层"]
-  Router --> Schemas["Schema 层"]
-  Router --> Integration["INTEGRATION.md<br/>Claude Code 原生能力桥接"]
+  Entry["CLAUDE.md<br/>全局入口点"] --> Router["SYSTEM_INDEX.md<br/>上下文路由器"]
+  Router --> Constitution["CONSTITUTION.md<br/>行为法律"]
+  Router --> Protocols["执行协议"]
+  Router --> Schemas["Schema 定义"]
+  Router --> Integration["INTEGRATION.md<br/>Claude Code 原生桥接"]
 
   Protocols --> Exec["EXECUTION_PROTOCOL.md"]
   Protocols --> Subagents["SUBAGENT_PROTOCOL.md"]
@@ -69,8 +217,9 @@ flowchart TB
 
   Schemas --> Plan["PLAN_SCHEMA.md"]
   Schemas --> Handoff["HANDOFF_SCHEMA.md"]
+  Schemas --> ModeDecision["MODE_DECISION_SCHEMA.md"]
 
-  Constitution --> Workspace["项目级 .claude/ 工作区"]
+  Constitution --> Workspace["项目 .claude/ 工作区"]
   Plan --> Workspace
   Handoff --> Workspace
   Validation --> Workspace
@@ -78,60 +227,65 @@ flowchart TB
   Workspace --> Evidence["计划、记忆、交接、<br/>日志、验证记录"]
 ```
 
-### 文件地图
+### 仓库文件映射
 
 | 文件 | 作用 |
 |---|---|
-| `CLAUDE.md` | 全局入口与执行模式规则 |
-| `SYSTEM_INDEX.md` | 路由索引，只加载当前任务需要的协议文件 |
-| `CONSTITUTION.md` | 高阶行为宪法：Anti-XY、持久状态、验证 |
-| `INTEGRATION.md` | 与 Claude Code 原生能力的映射：TodoWrite、Agent、Skills、MCP、hooks |
-| `EXECUTION_PROTOCOL.md` | 主执行循环与模式驱动行为 |
-| `SUBAGENT_PROTOCOL.md` | 子代理派发、范围约束和搜索边界契约 |
-| `VALIDATION_PROTOCOL.md` | 代码与非代码交付物的验证阶梯 |
-| `COMPACT_PROTOCOL.md` | 上下文压缩前后的连续性协议 |
-| `SELF_EVALUATION_PROTOCOL.md` | 非平凡任务结束后的自我审计 |
+| `CLAUDE.md` | 全局入口点和执行模式规则 |
+| `SYSTEM_INDEX.md` | 仅加载所需协议文件的路由索引 |
+| `CONSTITUTION.md` | 高级行为法律：反 XY、持久状态、验证 |
+| `INTEGRATION.md` | 与 Claude Code 原生功能的映射：TodoWrite、Agent、Skills、MCP、钩子 |
+| `EXECUTION_PROTOCOL.md` | 主执行循环和模式驱动行为 |
+| `SUBAGENT_PROTOCOL.md` | 范围受限的子代理调度和搜索边界契约 |
+| `VALIDATION_PROTOCOL.md` | 代码和非代码可交付物的证据阶梯 |
+| `COMPACT_PROTOCOL.md` | 上下文压缩前后的连续性 |
+| `SELF_EVALUATION_PROTOCOL.md` | 非简单工作的任务后自我审计 |
+| `MODE_DECISION_SCHEMA.md` | 模式分类量化标准；标准/深度/恢复模式的必需制品 |
 | `PLAN_SCHEMA.md` | 版本化计划文件 schema |
-| `HANDOFF_SCHEMA.md` | 子代理任务包与结果 schema |
-| `PROJECT_STRUCTURE_SPEC.md` | 项目级 `.claude/` 工作区规范 |
-| `MIGRATION_PROTOCOL.md` | 版本、迁移、同步和漂移检测规则 |
-| `install.sh` | 幂等安装器与完整性检查器 |
-| `settings.json.sample` | Claude Code advisory hooks 示例 |
-| `metrics/` | 协议遵守、失败模式、改进建议的可选聚合记录 |
+| `HANDOFF_SCHEMA.md` | 子代理任务和结果 schema |
+| `PROJECT_STRUCTURE_SPEC.md` | 项目本地 `.claude/` 工作区规范 |
+| `MIGRATION_PROTOCOL.md` | 版本控制、迁移、同步和漂移规则 |
+| `install.sh` | 幂等安装程序和完整性检查器 |
+| `settings.json.sample` | Claude Code settings 的建议性钩子样本 |
+| `metrics/` | 协议遵守和失效模式的可选聚合记录 |
+
+---
 
 ## 执行模式
 
-Praxis 不会把每个请求都变成复杂仪式。它先分类，再决定启动多少协议。
+Praxis 避免将每个请求都变成仪式。工作首先被分类。
 
-| 模式 | 适用场景 | 协议开销 |
+| 模式 | 使用场景 | 协议开销 |
 |---|---|---|
-| `lightweight` | 平凡任务：不超过 2 个文件、不超过 8 次工具调用、单一领域、不需要持久状态 | 不创建 plan 文件，直接执行并做基础检查 |
-| `standard` | 普通非平凡任务 | 文件化计划、验证阶梯、自我审计 |
-| `deep` | 重构、迁移、架构决策、多代理协作、高风险任务 | 完整协议、风险追踪、受约束子代理 |
-| `recovery` | 发现漂移：目标丢失、跳过验证、计划状态损坏 | 重建目标并修复持久状态 |
+| `lightweight`（轻量级） | 简单任务：≤2 个文件、≤8 次工具调用、单一领域、无需持久状态 | 无计划文件；直接工作加完整性检查 |
+| `standard`（标准） | 普通的非简单工作 | 计划即文件、验证阶梯、自我评估 |
+| `deep`（深度） | 重构、迁移、架构决策、多代理工作、高风险 | 完整协议、风险跟踪、边界受限的子代理 |
+| `recovery`（恢复） | 检测到漂移：目标丢失、跳过验证、计划状态损坏 | 重建目标并修复持久状态 |
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Classify
-  Classify --> Lightweight: 平凡任务
-  Classify --> Standard: 非平凡任务
-  Classify --> Deep: 高风险任务
-  Classify --> Recovery: 发现漂移
+  [*] --> 分类
+  分类 --> 轻量级: 简单
+  分类 --> 标准: 非简单
+  分类 --> 深度: 高风险
+  分类 --> 恢复: 检测到漂移
 
-  Lightweight --> Done: 基础检查通过
-  Standard --> Plan
-  Deep --> Plan
-  Recovery --> Plan
+  轻量级 --> 完成: 完整性已检查
+  标准 --> 计划
+  深度 --> 计划
+  恢复 --> 计划
 
-  Plan --> Execute
-  Execute --> Validate
-  Validate --> SelfEvaluate
-  SelfEvaluate --> Done
+  计划 --> 执行
+  执行 --> 验证
+  验证 --> 自我评估
+  自我评估 --> 完成
 ```
+
+---
 
 ## 项目工作区
 
-对于非平凡任务，Praxis 会创建或使用项目本地的 `.claude/` 工作区。
+对于非简单工作，Praxis 会创建或使用项目本地的 `.claude/` 工作区。
 
 ```text
 <repo>/.claude/
@@ -151,29 +305,9 @@ stateDiagram-v2
 └── logs/
 ```
 
-这个工作区是执行系统的持久基底。对话很有用，但文件才是长期可信的系统记录。
+这个工作区是持久化的基底。对话有其价值，但文件才是权威来源。
 
-## 为什么这样更好
-
-### 1. 它优化真实目标，而不是表面指令
-
-Praxis 会要求 Agent 区分“用户字面上说了什么”和“用户真正想解决什么”。这能减少把错误前提打磨成漂亮错误答案的情况。
-
-### 2. 它能承受长会话和上下文压缩
-
-计划、决策、假设、风险、被拒绝路径、验证结果和 compact summary 都会进入文件。未来会话可以从项目工作区恢复，而不是依赖脆弱的聊天上下文。
-
-### 3. 它让子代理变得可审计
-
-子代理拿到的是有边界的任务包，返回的是结构化结果。主 Agent 仍负责整合、提升为项目记忆，以及最终判断。
-
-### 4. 它区分战略和战术
-
-Claude Code 原生的 TodoWrite 很适合当前会话的步骤管理。Praxis 的 plan 文件负责跨会话战略。`INTEGRATION.md` 明确定义两者如何共存。
-
-### 5. 它用证据定义完成
-
-验证阶梯避免把“已经实现”误认为“已经完成”。对文档、配置、设计、schema 这类非代码任务，`VALIDATION_PROTOCOL.md` 也提供了专门的非代码验证分支。
+---
 
 ## 安装
 
@@ -184,7 +318,7 @@ git clone https://github.com/ZIONISREAL/Claude-Praxis.git
 cd Claude-Praxis
 ```
 
-先 dry-run：
+试运行安装程序：
 
 ```bash
 ./install.sh --from . --dry-run
@@ -196,80 +330,40 @@ cd Claude-Praxis
 ./install.sh --from .
 ```
 
-检查已有安装：
+检查现有安装：
 
 ```bash
 ./install.sh --check
 ```
 
-Claude Code 的 settings 是用户本地配置。仓库提供 `settings.json.sample`，如果你希望启用 advisory hook 信号，请把其中的 `hooks` 合并到你的 `~/.claude/settings.json`。
+Claude Code settings 因用户而异。本仓库提供 `settings.json.sample`；如需建议性钩子信号，请将其 `hooks` 合并到您的 `~/.claude/settings.json`。
 
-## Hook 哲学
+---
 
-Hooks 是 advisory 的。它们让协议遵守情况变得可见，但不阻断工具执行。
+## 钩子哲学
+
+钩子是有意为建议性的。它们使协议遵守可见，但不阻止工具执行。
 
 ```mermaid
 flowchart LR
-  Hooks["Claude Code hooks"] --> Signals["可见提醒"]
-  Signals --> Agent["Agent 选择有纪律的路径"]
-  Agent --> Files["持久记录"]
-  Files --> Audit["人类 / 未来 Agent 审计"]
+  Hooks["Claude Code 钩子"] --> Signals["可见提醒"]
+  Signals --> Agent["代理选择有纪律的路径"]
+  Agent --> Files["持久化记录"]
+  Files --> Audit["人工 / 未来代理审计"]
 ```
 
-这很重要。硬性拦截容易让日常工作变脆。Praxis 追求的是有纪律的执行，而不是把工具关进笼子。
+这一点很重要，因为强制执行可能使日常工作变得脆弱。Praxis 的目标是在不将工具变成囚笼的情况下实现有纪律的行为。
 
-## Benchmark 设想
+---
 
-Claude-Praxis 是工作流框架，所以性能不应该只看 token 速度，而应该看任务结果。
+## 版本与许可证
 
-### 建议的 Benchmark 设计
+当前版本：参见 `VERSION` 和 `CHANGELOG.md`。
 
-同一组任务跑两遍：
+许可证：MIT。参见 `LICENSE`。
 
-1. **Baseline**：未安装 Praxis 的 Claude Code
-2. **Praxis**：安装 Claude-Praxis 后的 Claude Code
+---
 
-任务集建议包含 20-40 个代表性任务：
+## 致谢
 
-| 任务类型 | 示例 |
-|---|---|
-| Lightweight | 重命名字段、调整配置、更新一份文档 |
-| Standard | 跨 3-6 个文件实现一个小功能 |
-| Deep | 重构模块、迁移 API、拆分服务 |
-| Recovery | 在上下文压缩或验证失败后恢复任务 |
-| Anti-XY | 用户要求表面修复，但真正根因在别处 |
-
-### 指标
-
-| 指标 | 衡量什么 | 预期方向 |
-|---|---|---|
-| 一次完成成功率 | 第一次完成后任务是否真的可用 | standard/deep 任务更高 |
-| 目标匹配分 | 是否解决真实问题，而不是只满足字面要求 | 更高 |
-| 验证覆盖率 | 完成前是否产生了有意义的证据 | 明显更高 |
-| 上下文恢复时间 | 压缩或重启后恢复任务所需时间 | 更低 |
-| 返工率 | 因遗漏假设导致的后续修复次数 | 更低 |
-| 轻量任务开销 | 平凡任务额外耗时 | 如果模式分类有效，应接近零 |
-| token / tool 开销 | harness 带来的额外读写和工具调用 | deep 任务会更高，lightweight 应受控 |
-
-### 示例计分表
-
-```text
-task_id,mode,baseline_success,praxis_success,baseline_minutes,praxis_minutes,
-baseline_validation_level,praxis_validation_level,rework_count,objective_fit_1_to_5
-```
-
-这个 tradeoff 是有意设计的：
-
-- 小任务应该接近 baseline 的速度
-- standard/deep 任务会在前期多花一点成本
-- 复杂任务应通过更少重启、更少遗漏假设、更强验证证据来收回成本
-
-## 状态
-
-当前版本：`1.0.1`
-
-详见 `VERSION` 和 `CHANGELOG.md`。
-
-## License
-
-MIT。详见 `LICENSE`。
+通过与 Claude（Opus 4.7 编排器 + Sonnet 4.6 子代理）的结构化协作设计和实现。harness 被用于构建其自身；参见 `_meta/plan-v001.md` 和 `_meta/plan-v002.md`，了解系统自身构建的可追溯计划。

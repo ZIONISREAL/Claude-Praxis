@@ -123,3 +123,37 @@ When the deliverable is documentation, configuration, design, schema, or process
    - same as §7: did the document solve the real problem, not just the literal request?
 
 Record evidence in `.claude/validation/test-results.md` with type tagged as `non-code`.
+
+## 11. Closure Token
+
+A claim of completion in standard, deep, or recovery mode must be structurally coupled to validation evidence by quoting a closure token.
+
+### Token Construction
+
+The closure token is a verbatim quote in the form:
+
+```
+[CLOSURE: plan=<plan-id> evidence=<path-to-validation-file> last-line="<last non-empty line of that file>" at=<ISO-8601 UTC>]
+```
+
+### Where the Token Must Appear
+
+The token must appear in:
+
+1. The agent's user-facing message that announces completion, AND
+2. The corresponding `<repo>/.claude/validation/self-evaluation.md` entry for this task
+
+### Token Validity Rules
+
+- `evidence` must point to an existing file inside `<repo>/.claude/validation/` (typically `test-results.md`, `objective-verification.md`, or a closure-specific file)
+- `last-line` must be the actual last non-empty line of that file at the moment of token construction
+- `at` must be UTC and within 5 minutes of the message in which the token appears
+- A token whose components do not all resolve is invalid and the closure claim is malformed
+
+### Lightweight Mode Exemption
+
+Lightweight mode does not produce a closure token. A simple "done" suffices, since no formal validation ladder applies. If a lightweight task is later discovered to have crossed into non-trivial territory, retroactively producing the artifact is required as a recovery action.
+
+### Why This Rule Exists
+
+LLMs under context pressure tend to skip the validation ladder and emit a verbal completion claim. The closure token couples the claim and the evidence at the syntactic layer: a token cannot be produced without first writing or reading the evidence file. This converts compliance from discipline-level to format-level.

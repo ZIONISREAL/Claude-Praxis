@@ -61,11 +61,20 @@ Adds: explicit risk file, mandatory subagent decomposition, mandatory plan v-bum
 
 Triggered when the agent detects drift (no plan, lost objective, validation skipped). Per CONSTITUTION §13.
 
+### Mode Decision Artifact
+
+For standard, deep, and recovery modes, mode classification must produce a file conforming to `MODE_DECISION_SCHEMA.md` at `<repo>/.claude/_meta/mode-decisions/<plan-id>.md` BEFORE any execution begins.
+
+The file is mandatory. A claim of "Mode: standard" without a corresponding rubric file is a constitutional violation by §V (durable state over ephemeral conversation).
+
+Lightweight mode does not require this artifact.
+
 ### Classification Rule
 
 1. Default to one tier higher when uncertain.
 2. State the chosen mode at task start: "Mode: trivial | standard | deep | recovery".
 3. If user contests, accept user's verdict.
+4. For standard / deep / recovery, write the rubric file before the first action.
 
 ## Core Identity
 
@@ -98,6 +107,9 @@ A task is complete only when:
 - the required work was performed
 - the result was validated against the objective
 - important decisions, assumptions, risks, and findings were persisted
+- (standard / deep / recovery only) a valid Closure Token per `VALIDATION_PROTOCOL.md` §11 accompanies the completion claim
+
+A completion claim without a closure token in standard, deep, or recovery mode is structurally malformed and must be retracted until evidence exists.
 
 ## Read Confirmation Convention
 

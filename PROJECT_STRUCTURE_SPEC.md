@@ -53,9 +53,11 @@ This workspace is the execution substrate for:
 │   ├── test-results.md
 │   ├── acceptance-checklist.md
 │   └── objective-verification.md
-└── logs/
-    ├── execution-log.md
-    └── compact-log.md
+├── logs/
+│   ├── execution-log.md
+│   └── compact-log.md
+└── _meta/
+    └── mode-decisions/
 ```
 
 ## 3. `WORKSPACE_INDEX.md`
@@ -283,7 +285,7 @@ One entry per meaningful action. Format (tab-separated):
 Where:
 - `mode`: lightweight | standard | deep | recovery
 - `phase`: scan | plan | execute | validate | handoff | compact
-- `action`: read | write | edit | dispatch-subagent | run-tool | decide | reject | recover
+- `action`: read | write | edit | dispatch-subagent | run-tool | decide | reject | recover | skip-rule | classify-mode | claim-closure
 - `target`: file path, tool name, or subagent task id
 - `outcome`: ok | partial | fail | escalated
 
@@ -291,6 +293,23 @@ Section headers `## YYYY-MM-DD` may group entries by day.
 
 Do not log trivial reads in lightweight mode.
 Do log every Edit/Write/Bash in standard or deep mode.
+
+### Article Tagging Convention
+
+Every entry whose action is one of {decide, reject, dispatch-subagent, skip-rule, classify-mode, claim-closure} MUST carry a constitutional-article tag at the start of the `target` field, in the form `[§N rule-name]`. Examples:
+
+```text
+2026-04-27T08:00:00Z  standard  plan      classify-mode      [§II goal-truth] mode=standard rubric=_meta/mode-decisions/plan-foo-v001.md  ok
+2026-04-27T08:15:00Z  standard  execute   dispatch-subagent  [§VIII subagent-law] sa-investigator-1 scope=auth-flow                       ok
+2026-04-27T09:00:00Z  standard  validate  skip-rule          [§X verification] skipped realistic-input — no real input available; sanity+synthetic only  partial
+2026-04-27T09:15:00Z  standard  validate  claim-closure      [§X verification] [CLOSURE: plan=plan-foo-v001 evidence=...]                ok
+```
+
+The article reference must correspond to the actual constitutional article governing the action. A grep across `execution-log.md` for `\[§N` reveals which articles were touched; absence of any tag for §X over a closing task is a detectable adherence gap.
+
+### Discipline
+
+This convention is OBSERVABILITY, not enforcement. The agent is not asked to obey better; it is asked to leave a trace. Missing or incorrect tags surface in self-evaluation and audit, not in flight.
 
 ### `compact-log.md`
 
@@ -323,7 +342,19 @@ If subagents are dispatched, one entry per dispatch:
 - escalations: ...
 ```
 
-## 12. Creation Rules
+## 12. `_meta/`
+
+Project-local meta-workspace for execution-control artifacts.
+
+### `_meta/mode-decisions/`
+
+One file per plan, named `<plan-id>.md`, conforming to `MODE_DECISION_SCHEMA.md`.
+
+### `_meta/last_compact_marker.txt`
+
+Optional. Written by the PreCompact hook (see settings.json.sample). Contains the timestamp of the most recent compaction.
+
+## 13. Creation Rules
 
 Create project-local `.claude/` when:
 
@@ -335,7 +366,7 @@ Create project-local `.claude/` when:
 - XY risk exists
 - running under broad permissions
 
-## 13. Repair Rules
+## 14. Repair Rules
 
 If incomplete:
 
@@ -345,7 +376,7 @@ If incomplete:
 - do not overwrite user-authored files silently
 - record repair in `logs/execution-log.md`
 
-## 14. Forbidden Patterns
+## 15. Forbidden Patterns
 
 Forbidden:
 
