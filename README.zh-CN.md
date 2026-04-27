@@ -4,6 +4,14 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
+> ### 🆕 v1.2.0 最新更新（Latest）
+>
+> - 🚀 **一行命令更新** —— `~/.claude/install.sh --update` 自动从注册源拉取最新版本。新增 flag：`--check-version`、`--changelog`。
+> - 🪶 **Token 消耗减少约 50%** —— Thin-dispatch packet 文件（`SUBAGENT_PROTOCOL §11`）将子代理 prompt 从 ~5K 压到 ~50 tokens（实测）。5 层 `SYSTEM_INDEX` 将最小读集从 7 文件减到 3 文件。`CLAUDE.md` 从 121 行瘦到 38 行。
+> - 📊 **基线已测量** —— v1.2 之前的每任务开销记录于 [`metrics/token-cost-baseline.md`](metrics/token-cost-baseline.md)，便于后续版本声明有证据支持的改进。
+>
+> [完整 v1.2.0 release notes →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0 →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [CHANGELOG](CHANGELOG.md)
+
 该名称源于希腊语 **praxis**（πρᾶξις）：有纪律的实践，理论在此转化为行动。代码写完不等于任务完成。
 
 Claude-Praxis 将随意的 Claude Code 会话转化为结构化、可审计、可恢复的工作。它在 Claude Code 之上添加了一层轻薄的运作层：目标框定、模式选择、持久化规划、范围受限的子代理、验证证据，以及跨上下文压缩的连续性保障。

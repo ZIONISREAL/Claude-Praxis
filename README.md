@@ -4,6 +4,14 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
+> ### 🆕 What's New in v1.2.0 (Latest)
+>
+> - 🚀 **One-command update** — `~/.claude/install.sh --update` pulls the latest version from your registered source. New flags: `--check-version`, `--changelog`.
+> - 🪶 **~50% token reduction** — Thin-dispatch packet files (`SUBAGENT_PROTOCOL §11`) cut subagent prompt size from ~5K to ~50 tokens (measured). 5-tier `SYSTEM_INDEX` reduces minimal read set from 7 files to 3. `CLAUDE.md` slimmed from 121 to 38 lines.
+> - 📊 **Measured baseline** — Pre-v1.2 per-task overhead recorded at [`metrics/token-cost-baseline.md`](metrics/token-cost-baseline.md) so future versions claim evidence-based improvement.
+>
+> [Full v1.2.0 release notes →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0 →](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [CHANGELOG](CHANGELOG.md)
+
 The name comes from Greek **praxis** (πρᾶξις): disciplined practice, where theory becomes action. Code written is not the same thing as task done.
 
 Claude-Praxis turns ad-hoc Claude Code sessions into structured, auditable, recoverable work. It adds a thin operating layer around Claude Code: goal framing, mode selection, durable planning, scoped subagents, validation evidence, and continuity across context compaction.
