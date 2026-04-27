@@ -7,36 +7,37 @@ It is intentionally short.
 
 Do not use this file for long explanations.
 
-**【读取确认指令】读完此文档后，必须立即在回复开头汇报：「✅ 已读取 SYSTEM_INDEX.md，本次执行将载入：[列出实际选择的文档]」**
+**【读取确认指令】读完此文档后，必须立即在回复开头汇报：「✅ 已读取 SYSTEM_INDEX.md，本次执行将载入：[Tier A / A+B / A+B+C ...]」**
 
-## Default Read Set
+## Tiered Read Sets
 
-For ordinary non-trivial tasks, read:
+Read only the tier required for the task. Most non-trivial tasks need only Tier A.
+
+### Tier A — Minimal (any non-trivial task)
 
 - `CONSTITUTION.md`
-- `INTEGRATION.md`
 - `EXECUTION_PROTOCOL.md`
-- `PROJECT_STRUCTURE_SPEC.md`
-- `PLAN_SCHEMA.md`
 - `MODE_DECISION_SCHEMA.md`
-- `VALIDATION_PROTOCOL.md`
 
-## If the task involves subagents, also read
+### Tier B — Add when subagents will be dispatched
 
 - `SUBAGENT_PROTOCOL.md`
 - `HANDOFF_SCHEMA.md`
 
-## If the task is long-running or may compact context, also read
+### Tier C — Add when closure is formal (standard / deep / recovery)
 
-- `COMPACT_PROTOCOL.md`
+- `VALIDATION_PROTOCOL.md`
+- `SELF_EVALUATION_PROTOCOL.md`
+- `PLAN_SCHEMA.md`
 
-## If the repository lacks project-local `.claude/`, also read
+### Tier D — Add when first creating a project workspace
 
 - `PROJECT_STRUCTURE_SPEC.md`
+- `INTEGRATION.md`
 
-## If the task is non-trivial and standard/deep mode, also read
+### Tier E — Add when context compaction is imminent
 
-- `SELF_EVALUATION_PROTOCOL.md`
+- `COMPACT_PROTOCOL.md`
 
 ## Project-Level Next Step
 

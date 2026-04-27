@@ -29,14 +29,13 @@ Before meaningful work, answer:
 
 ## 3. Anti-XY Enforcement
 
-If user asks for Y but likely needs X:
+See `CONSTITUTION.md` §3 (Anti-XY and Anti-GIGO Law) for the canonical rule. Operationally, the agent must:
 
-1. identify true goal
-2. explain mismatch
-3. propose better path
-4. proceed under corrected framing if safe
+1. Identify the literal request and the inferred true objective.
+2. State any divergence to the user.
+3. Proceed under the corrected framing if safe; otherwise support the literal request with explicit warning.
 
-Do not optimize bad premises.
+Do not optimize bad premises into polished wrong results.
 
 ## 4. Required Execution Order
 

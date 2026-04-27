@@ -4,6 +4,27 @@ All notable changes to this harness.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] — 2026-04-27
+
+### Added
+- `install.sh --update` — one-command update for git-installed users
+- `install.sh --check-version` — compare local VERSION against remote
+- `install.sh --changelog [version]` — fetch CHANGELOG section
+- `metrics/token-cost-baseline.md` — pre-v1.2 measurement reference
+- SUBAGENT_PROTOCOL §11 — Thin-Dispatch Requirement (packet files for spec-heavy dispatches)
+- HANDOFF_SCHEMA Thin-Dispatch Prompt Template
+
+### Changed
+- SYSTEM_INDEX read set restructured into 5 tiers (A–E); minimal tier is now 3 files instead of 7
+- CLAUDE.md slimmed from ~121 lines to ~50, with detail moved to referenced protocols
+- EXECUTION_PROTOCOL §3 (Anti-XY) now references CONSTITUTION §3 instead of duplicating
+
+### Token Reduction Impact
+Per-task overhead targeted from ~12K to ~5-6K tokens (~50% reduction). See `metrics/token-cost-baseline.md` for methodology and re-measurement plan.
+
+### Rationale
+User feedback identified that subagent dispatches inline full specs into prompts, copying that text into the main agent's running transcript and charging every subsequent message. This violated existing HANDOFF_SCHEMA §1 / SUBAGENT_PROTOCOL §6. v1.2 enforces the protocol via §11 and provides measurable optimization across four layers.
+
 ## [1.1.0] — 2026-04-27
 
 ### Added — Structural Artifacts for Meta-Decisions
@@ -19,10 +40,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - SELF_EVALUATION "Skipped Rules" must be non-empty in standard / deep / recovery
 - EXECUTION_PROTOCOL §4 adds step 15 for article-tagged logging
 - SYSTEM_INDEX adds MODE_DECISION_SCHEMA to default read set
-
-### Documentation
-- Bilingual README rewrite (`README.md` / `README.zh-CN.md`) — comprehensive design rationale: four LLM failure modes addressed, self-attestation→structural-artifact philosophy, mechanism-by-mechanism explanation (1B/2A/3A), validation evidence with verbatim closure token, prioritized roadmap (3D→2B→2C→1A), honest residual risks
-- `_meta/plan-v002.md`, `_meta/mode-decisions/`, `_meta/validation/closure-praxis-v11-batch1-v001.md` shipped as dogfood traceability artifacts
 
 ### Rationale
 Three failure modes addressed:

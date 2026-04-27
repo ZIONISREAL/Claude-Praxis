@@ -80,6 +80,18 @@ Stop and report if:
 - [condition]
 ```
 
+### Thin-Dispatch Prompt Template
+
+When dispatching a packet file, the main agent's Agent tool prompt should be:
+
+```
+Effort: medium. Do not invoke extended thinking. Do not skip reasoning.
+Task packet: <absolute-path>
+Read the packet, execute per its Specification section, report per its Required Output section.
+```
+
+The packet file at `<absolute-path>` is the authoritative source of constraints, allowed reads/writes, and done criteria. The thin prompt is just a pointer.
+
 ## 2. Subagent Result
 
 Location:

@@ -139,7 +139,7 @@ Praxis v1.1 通过将新规则应用于其自身实现来进行验证。在 v1.1
 
 这一诚实披露本身就是 v1.1 系统在发挥作用。根据新规则，`SELF_EVALUATION_PROTOCOL.md` 的"跳过规则"部分必须为非空，且默认情况下虚假纯洁是可疑的。子代理将这一局限性浮出水面而非隐藏——这正是 harness 被设计来产生的行为。
 
-v1.1 第一批次发布的实际关闭令牌：
+v1.1 第一批次发布的实际关闭令牌（v1.1.0 发布；v1.2.0 token 减量工作详见 CHANGELOG）：
 
 ```
 [CLOSURE: plan=plan-praxis-v11-batch1-v001 evidence=_meta/validation/closure-praxis-v11-batch1-v001.md last-line="praxis-v11-batch1-closed-2026-04-27" at=2026-04-27T08:47:02Z]
@@ -166,6 +166,10 @@ v1.1 第一批次发布的实际关闭令牌：
 ### 然后：1A — 量化运行时升级
 
 **为何最后：** 量化文件（1B）加上标准模式监控已在任务开始时捕获低估分类。运行时自动升级是附加的——有用，但不是当前失效模式中的主要缺口。
+
+### 已发布：v1.2.0 — Token 成本减量
+
+按用户驱动的基线测量实施：5 级读集分层、瘦身的 CLAUDE.md、强制 thin-dispatch（通过 packet 文件，修正了对 HANDOFF_SCHEMA §1 的违规）、Anti-XY 去重。每任务开销减少约 50%。详见 `metrics/token-cost-baseline.md` 与 `install.sh --changelog 1.2.0`。
 
 ---
 
@@ -337,6 +341,14 @@ cd Claude-Praxis
 ```
 
 Claude Code settings 因用户而异。本仓库提供 `settings.json.sample`；如需建议性钩子信号，请将其 `hooks` 合并到您的 `~/.claude/settings.json`。
+
+### 更新已有安装
+
+```bash
+~/.claude/install.sh --check-version    # 查看是否有新版本
+~/.claude/install.sh --changelog        # 查看更新内容
+~/.claude/install.sh --update           # 应用更新（需要 git clone 安装的源）
+```
 
 ---
 

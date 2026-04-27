@@ -139,7 +139,7 @@ Praxis v1.1 was validated by applying the new rules to its own implementation. A
 
 This honest disclosure is itself the v1.1 system working. By the new rules, the `Skipped Rules` section of `SELF_EVALUATION_PROTOCOL.md` must be non-empty, and false purity is suspect by default. The subagent surfaced the limitation rather than hiding it — which is the behavior the harness was designed to produce.
 
-The actual closure token from the v1.1 batch 1 release:
+The actual closure token from the v1.1 batch 1 release (v1.1.0 release; see CHANGELOG for v1.2.0 token-reduction work):
 
 ```
 [CLOSURE: plan=plan-praxis-v11-batch1-v001 evidence=_meta/validation/closure-praxis-v11-batch1-v001.md last-line="praxis-v11-batch1-closed-2026-04-27" at=2026-04-27T08:47:02Z]
@@ -166,6 +166,10 @@ Each next batch is gated on observed v1.1 task data accumulating in `metrics/`. 
 ### Then: 1A — Quantitative Runtime Escalation
 
 **Why last:** The rubric file (1B) combined with standard mode-monitoring already catches under-classification at task start. Runtime auto-escalation is additive — useful, but not the dominant gap in the current failure profile.
+
+### Already Shipped: v1.2.0 — Token-Cost Reduction
+
+Implemented per user-driven baseline measurement: 4-tier read set, slimmed CLAUDE.md, mandatory thin-dispatch via packet files (correcting a HANDOFF_SCHEMA §1 violation), and Anti-XY dedupe. Per-task overhead reduced ~50%. See `metrics/token-cost-baseline.md` and `install.sh --changelog 1.2.0`.
 
 ---
 
@@ -337,6 +341,14 @@ Check an existing install:
 ```
 
 Claude Code settings are user-specific. This repository ships `settings.json.sample`; merge its `hooks` into your `~/.claude/settings.json` if you want advisory hook signals.
+
+### Update an Existing Install
+
+```bash
+~/.claude/install.sh --check-version    # see if a new version is available
+~/.claude/install.sh --changelog        # see what's new
+~/.claude/install.sh --update           # apply update (requires git-cloned source)
+```
 
 ---
 

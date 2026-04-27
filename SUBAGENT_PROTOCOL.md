@@ -157,3 +157,27 @@ The main agent may override only when:
 - The task is genuinely trivial classification or formatting (Haiku allowed, with justification logged)
 
 Each override must be recorded in `.claude/logs/subagent-log.md` with the `model` and `effort` chosen and the reason.
+
+## 11. Thin-Dispatch Requirement
+
+For any subagent task whose specification exceeds 1000 characters, the main agent MUST:
+
+1. Write the full task packet (per `HANDOFF_SCHEMA.md` §1) as a file at `<repo>/.claude/handoffs/outbox/<task-id>.md` (or `~/.claude/_meta/handoffs/outbox/<task-id>.md` for harness-meta work).
+
+2. Dispatch with a thin prompt of ≤ 300 tokens, structured as:
+
+```
+Effort: medium. Do not invoke extended thinking.
+Task packet: <absolute path to packet file>
+Read the packet, execute per its Specification section, report per its Required Output section.
+```
+
+For tasks with specifications ≤ 1000 characters, inline dispatch is permitted.
+
+### Why This Rule Exists
+
+Inlining a 5K-token specification into the Agent tool prompt copies that text into the main agent's running transcript, charging every subsequent conversation message for re-reading it. Writing the packet as a file shifts the cost to a one-time read by the subagent, keeps the main transcript lean, and produces an auditable handoff record per CONSTITUTION §V (durable state).
+
+### Verification
+
+A dispatch is non-compliant if the prompt exceeds 300 tokens AND the spec exceeds 1000 characters. Audit subagents and self-evaluation should flag this.
