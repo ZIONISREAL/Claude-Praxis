@@ -125,12 +125,17 @@ v1.3.0 新增 Codex 兼容分发路径：
 
 ## Token 减量 — v1.2.0
 
-| 指标 | v1.2 之前 | v1.2 之后 |
-|---|---|---|
-| 每任务开销 | ~12,000 tokens | ~5,000–6,000 tokens |
-| 子代理派发 prompt | ~5,000 tokens | ~50 tokens |
-| 最小协议读集 | 7 文件 | 3 文件 |
-| 更新机制 | 手动 git pull | `install.sh --update` |
+| 指标 | 原生 Claude Code 模式 | Praxis v1.2 之前 | Praxis v1.2 之后 |
+|---|---|---|---|
+| 每任务编排开销 | 隐含在重复 prompt 上下文中 | ~12,000 tokens | ~5,000–6,000 tokens |
+| 子代理派发 prompt | 每个 subagent 都接收大段内联 prompt | ~5,000 tokens | ~50 tokens |
+| 并行 subagent 成本 | 项目/任务/文件上下文随每个 subagent 重复发送 | 随每次内联派发倍增 | 每个 subagent 只接收任务包路径引用 |
+| 最小协议读集 | 由代理从当前上下文自行判断 | 7 文件 | 3 文件 |
+| 更新机制 | 工具原生/手动流程 | 手动 git pull | `install.sh --update` |
+
+原生 Claude Code 的 subagent 派发逻辑，常见形态是把项目架构、任务目标、执行文件上下文全部作为 prompt 输出给子代理。如果多个 subagent 并行派发，这些大段上下文会在每一次派发中重复出现，产生非常大的冗余 prompt 消耗。
+
+Praxis v1.2 优化后的版本把派发变成路径化指令：主代理先写入 task packet 文件，再只把任务包路径和相关操作文件发送给子代理。单次派发 prompt 控制在约 50 tokens 内，详细上下文由 worker 根据引用文件自行读取。
 
 [v1.2.0 release notes](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [Benchmark 方法论](metrics/token-cost-baseline.md) · [CHANGELOG](CHANGELOG.md)
 

@@ -125,12 +125,17 @@ v1.3.0 adds a Codex-compatible distribution path:
 
 ## Token Reduction — v1.2.0
 
-| Metric | Before v1.2 | After v1.2 |
-|---|---|---|
-| Per-task overhead | ~12,000 tokens | ~5,000–6,000 tokens |
-| Subagent dispatch prompt | ~5,000 tokens | ~50 tokens |
-| Minimal protocol read set | 7 files | 3 files |
-| Update mechanism | manual git pull | `install.sh --update` |
+| Metric | Native Claude Code pattern | Praxis before v1.2 | Praxis after v1.2 |
+|---|---|---|---|
+| Per-task orchestration overhead | implicit in repeated prompt context | ~12,000 tokens | ~5,000–6,000 tokens |
+| Subagent dispatch prompt | large inline prompt per subagent | ~5,000 tokens | ~50 tokens |
+| Parallel subagent cost | repeated project/task/file context per subagent | multiplied by each inline dispatch | path-based packet reference per subagent |
+| Minimal protocol read set | agent decides from active context | 7 files | 3 files |
+| Update mechanism | tool-native/manual workflow | manual git pull | `install.sh --update` |
+
+Native Claude Code subagent dispatch commonly packages project architecture, task objective, and execution-file context directly into the subagent prompt. When multiple subagents are dispatched in parallel, that same large context is duplicated across each dispatch, creating substantial redundant prompt cost.
+
+Praxis v1.2 optimizes this by turning dispatch into a path-based instruction: the main agent writes a task packet file, then sends the subagent only the packet path and relevant operating files. The dispatch prompt itself stays under ~50 tokens; the detailed context is loaded once by the worker from the referenced file.
 
 [v1.2.0 release notes](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.2.0) · [v1.1.0](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.1.0) · [Benchmark methodology](metrics/token-cost-baseline.md) · [CHANGELOG](CHANGELOG.md)
 
