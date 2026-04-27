@@ -47,6 +47,12 @@ After reading required global files, inspect:
 
 If it does not exist and the task is non-trivial, create the project-local `.claude/` workspace according to `PROJECT_STRUCTURE_SPEC.md`.
 
+## Runtime Adapter
+
+Claude Code uses `CLAUDE.md`, `~/.claude/`, and `<repo>/.claude/`.
+
+Codex uses `AGENTS.md`, `~/.codex/`, and `<repo>/.codex/`. When this system is installed through `install-codex.sh`, apply the mapping in `CODEX_INTEGRATION.md` wherever a core protocol file still names the Claude path.
+
 ## Rule
 
 Read only what is needed for the current execution mode.

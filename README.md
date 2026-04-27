@@ -1,23 +1,108 @@
 # Claude-Praxis
 
-> **Token-efficient agent orchestration for Claude Code via thin dispatch + indexed loading.**
+> **A lightweight operating layer for Claude Code and Codex that makes AI coding work planned, auditable, and actually verified.**
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 ---
 
-## 🔥 First Task (30 seconds)
+## What Is This?
+
+Claude-Praxis is a governance layer for AI coding agents.
+
+It does not replace Claude Code or Codex. It gives them a disciplined way to work:
+
+1. understand the real objective, not just the literal prompt
+2. choose the right execution mode for the task size
+3. write durable plans and handoffs to files
+4. keep subagents bounded when the task is large
+5. validate the result before claiming it is done
+6. leave evidence a future agent or human can audit
+
+In plain English: it turns a coding agent from "I'll try the task and summarize what I did" into "I'll frame the goal, make a plan, execute in bounded steps, verify the outcome, and leave a paper trail."
+
+Claude-Praxis now supports both:
+
+| Agent | Global entrypoint | Global install path | Project workspace |
+|---|---|---|---|
+| Claude Code | `CLAUDE.md` | `~/.claude/` | `<repo>/.claude/` |
+| Codex | `AGENTS.md` | `~/.codex/` | `<repo>/.codex/` |
+
+---
+
+## What It Changes
+
+Imagine you ask an agent:
+
+> "Refactor our payment retry logic and make sure checkout still works."
+
+Without Praxis, the agent may jump straight into files, make plausible edits, run one convenient test, and say "done." If context gets long, it may forget why it chose a path. If a subagent was used, the handoff may be invisible. If validation was skipped, you only discover that later.
+
+With Praxis, the agent is pushed into a visible workflow:
+
+| Moment | What Praxis makes visible |
+|---|---|
+| Before editing | Is this lightweight, standard, deep, or recovery work? |
+| During planning | What is the real objective? What is out of scope? What could fail? |
+| During execution | Which files, handoffs, decisions, and risks changed? |
+| During validation | What command or check actually proved the result? |
+| At completion | Where is the evidence file, and does the closure claim point to it? |
+
+The effect is practical: fewer "looks done" failures, less lost context, safer subagent use, and a project memory that survives long sessions.
+
+---
+
+## Concrete Examples
+
+### Example 1 — A Small Bug Fix
+
+Prompt:
+
+> "Fix the date formatting bug in the invoice table."
+
+Praxis classifies this as `lightweight` if it is truly small. The agent can edit directly and run a sanity check. No ceremony for a one-file fix.
+
+### Example 2 — A Risky Refactor
+
+Prompt:
+
+> "Refactor auth middleware so mobile and web share the same session validation."
+
+Praxis classifies this as `standard` or `deep`. The agent writes a plan under the project workspace, records assumptions, tracks risks, and validates the real entrypoints instead of only checking that TypeScript compiles.
+
+### Example 3 — A Long Multi-Agent Task
+
+Prompt:
+
+> "Migrate this app from one database schema to another and preserve existing user data."
+
+Praxis requires scoped handoffs. One subagent may inspect schema usage, another may review migration risks, and the main agent integrates the results into a durable plan. The work can survive context compaction because the important state is in files, not just chat.
+
+---
+
+## Install In 30 Seconds
+
+### Claude Code
 
 ```bash
 git clone https://github.com/ZIONISREAL/Claude-Praxis ~/Claude-Praxis
 cd ~/Claude-Praxis && ./install.sh --from .
 ```
 
-Now open Claude Code in any project and try a real task:
+Open Claude Code in any project and try a real task:
 
 > *"Refactor this module's error handling and verify tests still pass."*
 
-Praxis auto-classifies mode → writes plan-as-files → dispatches scoped subagents (sonnet, medium effort) → validates against the real objective → emits a closure token coupling the claim to evidence. **You audit, not babysit.**
+Praxis auto-classifies mode, writes plan-as-files when needed, uses scoped subagents for larger work, validates against the real objective, and emits a closure token coupling the claim to evidence.
+
+### Codex
+
+```bash
+git clone https://github.com/ZIONISREAL/Claude-Praxis ~/Claude-Praxis
+cd ~/Claude-Praxis && ./install-codex.sh --from . --force
+```
+
+Open Codex in any project and try the same kind of real task. Codex-Praxis uses `AGENTS.md`, installs into `~/.codex/`, and maps the durable workspace convention to `<repo>/.codex/`.
 
 ---
 
@@ -26,11 +111,19 @@ Praxis auto-classifies mode → writes plan-as-files → dispatches scoped subag
 - **Mode-aware execution** — trivial tasks stay trivial; non-trivial tasks get plans, subagents, and validation
 - **Auditable meta-decisions** — every classification, dispatch, and closure leaves a file an outside reviewer can inspect
 - **~50% token-efficient** — measured per-task reduction vs naive inline-prompt patterns
-- **One-line updates** — `~/.claude/install.sh --update`
+- **One-line updates** — `~/.claude/install.sh --update` or `~/.codex/install-codex.sh --update`
 
 ---
 
-## Latest — v1.2.0
+## Latest — v1.3.0
+
+v1.3.0 adds a Codex-compatible distribution path:
+
+- `AGENTS.md` as the Codex entrypoint
+- `CODEX_INTEGRATION.md` for Claude-to-Codex path/tool mapping
+- `install-codex.sh` for idempotent local deployment into `~/.codex/`
+
+## Token Reduction — v1.2.0
 
 | Metric | Before v1.2 | After v1.2 |
 |---|---|---|
@@ -45,13 +138,13 @@ Praxis auto-classifies mode → writes plan-as-files → dispatches scoped subag
 
 The name comes from Greek **praxis** (πρᾶξις): disciplined practice, where theory becomes action. Code written is not the same thing as task done.
 
-Claude-Praxis turns ad-hoc Claude Code sessions into structured, auditable, recoverable work. It adds a thin operating layer around Claude Code: goal framing, mode selection, durable planning, scoped subagents, validation evidence, and continuity across context compaction.
+Claude-Praxis turns ad-hoc Claude Code or Codex sessions into structured, auditable, recoverable work. It adds a thin operating layer around the coding agent: goal framing, mode selection, durable planning, scoped subagents, validation evidence, and continuity across context compaction.
 
 ---
 
 ## Why This Exists
 
-Claude Code is already powerful. The problem is not capability; it is operational discipline under real work:
+Claude Code and Codex are already powerful. The problem is not capability; it is operational discipline under real work:
 
 - user requests are often symptoms, not true goals
 - long sessions lose state when context compacts
@@ -59,7 +152,7 @@ Claude Code is already powerful. The problem is not capability; it is operationa
 - completion claims can arrive before evidence
 - small tasks should stay small, but large tasks need structure
 
-Claude-Praxis adds the missing control plane without replacing Claude Code's native tools.
+Claude-Praxis adds the missing control plane without replacing the agent's native tools.
 
 ```mermaid
 flowchart LR
@@ -274,10 +367,12 @@ flowchart TB
 
 | File | Role |
 |---|---|
-| `CLAUDE.md` | Global entrypoint and execution mode rules |
+| `CLAUDE.md` | Claude Code global entrypoint and execution mode rules |
+| `AGENTS.md` | Codex global entrypoint and execution mode rules |
 | `SYSTEM_INDEX.md` | Routing index for loading only the required protocol files |
 | `CONSTITUTION.md` | High-level behavioral law: anti-XY, durable state, validation |
 | `INTEGRATION.md` | Mapping to Claude Code native features: TodoWrite, Agent, Skills, MCP, hooks |
+| `CODEX_INTEGRATION.md` | Mapping to Codex-native entrypoints, tools, and workspace paths |
 | `EXECUTION_PROTOCOL.md` | Main execution loop and mode-driven behavior |
 | `SUBAGENT_PROTOCOL.md` | Scoped subagent dispatch and search-boundary contract |
 | `VALIDATION_PROTOCOL.md` | Evidence ladder for code and non-code deliverables |
@@ -288,7 +383,8 @@ flowchart TB
 | `HANDOFF_SCHEMA.md` | Subagent task and result schema |
 | `PROJECT_STRUCTURE_SPEC.md` | Project-local `.claude/` workspace specification |
 | `MIGRATION_PROTOCOL.md` | Versioning, migration, sync, and drift rules |
-| `install.sh` | Idempotent installer and integrity checker |
+| `install.sh` | Claude Code idempotent installer and integrity checker |
+| `install-codex.sh` | Codex idempotent installer and integrity checker |
 | `settings.json.sample` | Advisory hook sample for Claude Code settings |
 | `metrics/` | Optional aggregate records for protocol adherence and failure patterns |
 
@@ -330,6 +426,8 @@ stateDiagram-v2
 
 For non-trivial work, Praxis creates or uses a project-local `.claude/` workspace.
 
+For Codex, the same structure is used under `.codex/`; see `CODEX_INTEGRATION.md` for the exact path mapping.
+
 ```text
 <repo>/.claude/
 ├── WORKSPACE_INDEX.md
@@ -353,6 +451,8 @@ This workspace is the durable substrate. Conversation is useful, but files are c
 ---
 
 ## Install
+
+### Claude Code
 
 Clone the repository:
 
@@ -381,12 +481,47 @@ Check an existing install:
 
 Claude Code settings are user-specific. This repository ships `settings.json.sample`; merge its `hooks` into your `~/.claude/settings.json` if you want advisory hook signals.
 
-### Update an Existing Install
+#### Update an Existing Claude Code Install
 
 ```bash
 ~/.claude/install.sh --check-version    # see if a new version is available
 ~/.claude/install.sh --changelog        # see what's new
 ~/.claude/install.sh --update           # apply update (requires git-cloned source)
+```
+
+### Codex
+
+Clone the repository:
+
+```bash
+git clone https://github.com/ZIONISREAL/Claude-Praxis.git
+cd Claude-Praxis
+```
+
+Dry-run the Codex installer:
+
+```bash
+./install-codex.sh --from . --dry-run
+```
+
+Install or upgrade into `~/.codex/`:
+
+```bash
+./install-codex.sh --from . --force
+```
+
+Check an existing Codex install:
+
+```bash
+~/.codex/install-codex.sh --check
+```
+
+Codex-Praxis installs `AGENTS.md` and protocol files. It does not overwrite `~/.codex/config.toml`, `auth.json`, session logs, plugins, or SQLite state.
+
+#### Update an Existing Codex Install
+
+```bash
+~/.codex/install-codex.sh --update
 ```
 
 ---

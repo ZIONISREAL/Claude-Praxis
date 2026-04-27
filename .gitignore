@@ -15,6 +15,10 @@ metrics/improvement-backlog.local.md
 last_compact_marker.txt
 _meta/last_compact_marker.txt
 
+# Local Praxis execution workspaces
+.claude/
+.codex/
+
 # User's actual settings — only ship the .sample
 settings.json
 
