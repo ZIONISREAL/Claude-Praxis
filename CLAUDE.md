@@ -29,7 +29,11 @@ State one: `Mode: lightweight | standard | deep | recovery`. Default one tier hi
 
 ## Completion
 
-A non-trivial task is complete only when validation evidence exists AND a Closure Token per `VALIDATION_PROTOCOL.md` §11 is included in the completion claim. Lightweight mode: no token needed.
+A non-trivial task is complete only when validation evidence exists AND a Closure Token per `VALIDATION_PROTOCOL.md` §11 is included in the completion claim. The token SHOULD include a `verifier=PASS` field produced by running `praxis doctor verify-closure <plan-id>` immediately before issuance.
+
+Lightweight mode: no token needed.
+
+See `VERIFICATION_PROTOCOL.md` for the three-layer execution-discipline model.
 
 ## Read Confirmation Convention
 

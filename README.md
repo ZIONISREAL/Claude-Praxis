@@ -115,13 +115,25 @@ Open Codex in any project and try the same kind of real task. Codex-Praxis uses 
 
 ---
 
-## Latest — v1.3.0
+## Latest — v1.4.0
 
-v1.3.0 adds a Codex-compatible distribution path:
+v1.4.0 ships the **Verification Layer** — `praxis doctor` CLI with stable rule IDs and PASS/FAIL judgments.
 
-- `AGENTS.md` as the Codex entrypoint
-- `CODEX_INTEGRATION.md` for Claude-to-Codex path/tool mapping
-- `install-codex.sh` for idempotent local deployment into `~/.codex/`
+```bash
+praxis doctor check                          # audit current workspace
+praxis doctor verify-closure <plan-id>       # strict closure verification
+praxis doctor list-rules                     # enumerate stable rule IDs
+```
+
+The closure token now supports an optional `verifier=PASS` field produced by the doctor immediately before issuance. An audit reader can reproduce the verdict.
+
+| Layer | v1.x Mechanism | v1.4 Status |
+|---|---|---|
+| Externalization | plans, mode rubrics, logs, evidence files | high |
+| Reflection | mandatory reads, self-eval, evidence pointers | medium |
+| Verification | **`praxis doctor` CLI + stable rule IDs** | medium → high |
+
+[v1.4.0 release notes](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.4.0) · [VERIFICATION_PROTOCOL.md](VERIFICATION_PROTOCOL.md) · [RULE_REGISTRY.md](RULE_REGISTRY.md) · [CHANGELOG](CHANGELOG.md)
 
 ## Token Reduction — v1.2.0
 

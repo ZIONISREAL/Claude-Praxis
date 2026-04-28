@@ -64,3 +64,5 @@ A non-trivial task is complete only when:
 - durable files are updated
 
 Use `VALIDATION_PROTOCOL.md` for the full closure standard.
+
+Closure token with `verifier=PASS` from `praxis doctor verify-closure` is expected in standard / deep / recovery modes. See `VERIFICATION_PROTOCOL.md`.

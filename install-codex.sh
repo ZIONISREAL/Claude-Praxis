@@ -33,6 +33,7 @@ MIGRATION_PROTOCOL.md
 PROJECT_WORKSPACE_INDEX_TEMPLATE.md
 VERSION
 install-codex.sh
+praxis
 "
 
 REQUIRED_METRICS="
@@ -69,6 +70,11 @@ Options:
   --check          Verify install integrity; do not modify anything
   --update         Pull latest from recorded source and reinstall with --force
   -h, --help       Show this help
+
+Files installed:
+  - Codex entrypoint AGENTS.md and Praxis protocol files
+  - praxis  (Python CLI binary, installed as executable at ~/.codex/praxis)
+  - metrics/ inventory files
 
 Behavior:
   - Installs Codex entrypoint AGENTS.md and Praxis protocol files into ~/.codex/.
@@ -142,6 +148,10 @@ install_file() {
       log_info "Overwriting (backed up): $rel"
       ensure_dir "$(dirname "$dst")"
       run "cp -p \"$src\" \"$dst\""
+      if [ "$rel" = "praxis" ]; then
+        run "chmod 755 \"$dst\""
+        log_info "chmod +x: $rel"
+      fi
     else
       log_info "Exists, keeping: $rel"
     fi
@@ -149,6 +159,10 @@ install_file() {
     log_info "Installing: $rel"
     ensure_dir "$(dirname "$dst")"
     run "cp -p \"$src\" \"$dst\""
+    if [ "$rel" = "praxis" ]; then
+      run "chmod 755 \"$dst\""
+      log_info "chmod +x: $rel"
+    fi
   fi
 }
 
@@ -196,6 +210,27 @@ check_install() {
     pass=0
   fi
 
+  # praxis binary checks
+  local praxis_bin="${TARGET_DIR}/praxis"
+  if [ -f "$praxis_bin" ] && [ -x "$praxis_bin" ]; then
+    mark_pass "praxis present (executable)"
+  else
+    mark_fail "praxis present (not found or not executable at ${praxis_bin})"
+    pass=0
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    mark_pass "python3 available"
+    if python3 "$praxis_bin" --version >/dev/null 2>&1; then
+      mark_pass "praxis callable (python3 ~/.codex/praxis --version)"
+    else
+      mark_fail "praxis callable (python3 ~/.codex/praxis --version exited non-zero)"
+      pass=0
+    fi
+  else
+    log_warn "python3 not found — praxis callable check skipped (install python3 to enable)"
+  fi
+
   if [ "$pass" -eq 1 ]; then
     log_ok "Integrity check: ALL PASS"
     return 0
@@ -237,6 +272,11 @@ do_install() {
   if [ -d "$BACKUP_DIR" ]; then
     log_info "Backups stored at: $BACKUP_DIR"
   fi
+
+  echo
+  log_info "Next steps:"
+  log_info "  Run 'python3 ~/.codex/praxis doctor check' to audit the workspace."
+  log_info "  Run '~/.claude/install.sh --check-version' to see available updates."
 }
 
 do_update() {

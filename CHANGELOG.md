@@ -4,20 +4,24 @@ All notable changes to this harness.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.3.0] — 2026-04-27
+## [1.4.0] — 2026-04-28
 
-### Added
-- Codex-Praxis compatibility layer with `AGENTS.md` as the Codex-native global entrypoint.
-- `CODEX_INTEGRATION.md` mapping Claude-Praxis concepts to Codex paths and tools.
-- `install-codex.sh` idempotent installer/checker for `~/.codex/`.
-- README install instructions for both Claude Code and Codex users.
+### Added — Verification Layer
+- `praxis` CLI tool implementing the third layer of execution discipline (verification)
+- `RULE_REGISTRY.md` — stable public IDs for verification rules (6 stable + 5 provisional)
+- `VERIFICATION_PROTOCOL.md` — three-layer model (externalization / reflection / verification)
+- VALIDATION_PROTOCOL §11 closure token now supports optional `verifier=PASS|FAIL` field
+- `praxis doctor` subcommands: check, verify-closure, lint, list-rules, explain
 
 ### Changed
-- Project positioning now documents Praxis as a governance layer that can run in Claude Code or Codex.
-- Codex installs deliberately avoid Claude-specific `settings.json` hooks and never mutate Codex auth/config/state files.
+- CLAUDE.md / AGENTS.md "Completion" sections recommend running `praxis doctor verify-closure` before issuing closure
+- SYSTEM_INDEX Tier C now includes VERIFICATION_PROTOCOL and RULE_REGISTRY
 
 ### Rationale
-Users asked to deploy the Praxis architecture inside Codex. A direct file rename would leave broken path assumptions (`~/.claude`, `CLAUDE.md`, Claude hooks). v1.3.0 adds a native Codex adapter while preserving the existing Claude installation path.
+v1.0–v1.3 produced visible execution state but relied on agent goodwill to actually verify it. The closure token's `last-line` check was format-detectable but not cryptographically enforced. v1.4 ships an external verifier (`praxis doctor`) that any agent or human can run to produce a PASS/FAIL judgment. The optional `verifier=` field on closure tokens captures the verdict for audit reproducibility.
+
+### Architecture
+The three-layer model is now testable: externalization (file exists) → reflection (file is read) → verification (file content is correct). The doctor enforces the third gate.
 
 ## [1.2.0] — 2026-04-27
 

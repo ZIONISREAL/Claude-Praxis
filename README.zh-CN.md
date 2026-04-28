@@ -115,13 +115,25 @@ cd ~/Claude-Praxis && ./install-codex.sh --from . --force
 
 ---
 
-## Latest — v1.3.0
+## Latest — v1.4.0
 
-v1.3.0 新增 Codex 兼容分发路径：
+v1.4.0 上线 **验证层** —— `praxis doctor` CLI，提供稳定 rule ID 与 PASS/FAIL 判定。
 
-- `AGENTS.md` 作为 Codex 入口
-- `CODEX_INTEGRATION.md` 负责 Claude 到 Codex 的路径/工具映射
-- `install-codex.sh` 支持幂等部署到 `~/.codex/`
+```bash
+praxis doctor check                          # 审计当前工作区
+praxis doctor verify-closure <plan-id>       # 严格的 closure 验证
+praxis doctor list-rules                     # 列出稳定 rule ID
+```
+
+关闭令牌现在支持可选 `verifier=PASS` 字段，由 doctor 在令牌发出前生成。审计阅读者可复现该判定。
+
+| 层 | v1.x 机制 | v1.4 状态 |
+|---|---|---|
+| 外化 | 计划、mode rubric、日志、证据文件 | 高 |
+| 反思 | 强制读取、self-eval、证据指针 | 中 |
+| 验证 | **`praxis doctor` CLI + 稳定 rule ID** | 中 → 高 |
+
+[v1.4.0 release notes](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.4.0) · [VERIFICATION_PROTOCOL.md](VERIFICATION_PROTOCOL.md) · [RULE_REGISTRY.md](RULE_REGISTRY.md) · [CHANGELOG](CHANGELOG.md)
 
 ## Token 减量 — v1.2.0
 

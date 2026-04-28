@@ -29,6 +29,8 @@ Read only the tier required for the task. Most non-trivial tasks need only Tier 
 - `VALIDATION_PROTOCOL.md`
 - `SELF_EVALUATION_PROTOCOL.md`
 - `PLAN_SCHEMA.md`
+- `VERIFICATION_PROTOCOL.md`
+- `RULE_REGISTRY.md`
 
 ### Tier D — Add when first creating a project workspace
 
@@ -46,12 +48,6 @@ After reading required global files, inspect:
 - `<repo>/.claude/WORKSPACE_INDEX.md`
 
 If it does not exist and the task is non-trivial, create the project-local `.claude/` workspace according to `PROJECT_STRUCTURE_SPEC.md`.
-
-## Runtime Adapter
-
-Claude Code uses `CLAUDE.md`, `~/.claude/`, and `<repo>/.claude/`.
-
-Codex uses `AGENTS.md`, `~/.codex/`, and `<repo>/.codex/`. When this system is installed through `install-codex.sh`, apply the mapping in `CODEX_INTEGRATION.md` wherever a core protocol file still names the Claude path.
 
 ## Rule
 

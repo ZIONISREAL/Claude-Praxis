@@ -136,6 +136,20 @@ The closure token is a verbatim quote in the form:
 [CLOSURE: plan=<plan-id> evidence=<path-to-validation-file> last-line="<last non-empty line of that file>" at=<ISO-8601 UTC>]
 ```
 
+### Optional Verifier Field
+
+The closure token may include an optional `verifier=PASS|FAIL` field at the end:
+
+```
+[CLOSURE: plan=<id> evidence=<path> last-line="<text>" at=<iso8601> verifier=PASS]
+```
+
+This field captures the result of `praxis doctor verify-closure <plan-id>` at the moment of token issuance. The agent SHOULD run the verifier immediately before constructing the token.
+
+In standard / deep / recovery modes, an audit reader will treat an unverified closure (no `verifier=` field) with the same skepticism as a missing closure.
+
+See `VERIFICATION_PROTOCOL.md` §4.
+
 ### Where the Token Must Appear
 
 The token must appear in:
