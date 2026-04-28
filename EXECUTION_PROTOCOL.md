@@ -53,7 +53,7 @@ Do not optimize bad premises into polished wrong results.
 12. Record decisions/findings/risks
 13. Update index/plan/handoff as needed
 14. Close or continue
-15. Append all decision-class actions (mode classification, subagent dispatch, rule skip, closure claim) to `<repo>/.claude/logs/execution-log.md` with constitutional article tag per PROJECT_STRUCTURE_SPEC §11 article-tagging convention.
+15. Append all decision-class actions (mode classification, subagent dispatch, rule skip, closure claim) to `<project-workspace>/logs/execution-log.md` with constitutional article tag per PROJECT_STRUCTURE_SPEC §11 article-tagging convention.
 
 ## 5. Execution Mode Selection
 
@@ -71,7 +71,7 @@ Mode determines:
 | Workspace creation | skip if absent | create if missing | create + populate context/ | repair existing |
 | TodoWrite | optional | required for 2+ steps | required | required |
 
-For standard, deep, and recovery modes, before the first non-trivial action the agent must write `<repo>/.claude/_meta/mode-decisions/<plan-id>.md` per `MODE_DECISION_SCHEMA.md`. Re-classifications during execution append to the same file.
+For standard, deep, and recovery modes, before the first non-trivial action the agent must write `<project-workspace>/_meta/mode-decisions/<plan-id>.md` per `MODE_DECISION_SCHEMA.md`. Re-classifications during execution append to the same file.
 
 Default to one tier higher when uncertain.
 
@@ -80,7 +80,7 @@ Default to one tier higher when uncertain.
 Non-trivial work requires an active versioned plan in:
 
 ```text
-<repo>/.claude/plans/active/
+<project-workspace>/plans/active/
 ```
 
 The plan must include:
@@ -152,7 +152,7 @@ Complete only when:
 
 - objective is correctly framed
 - implementation exists
-- validation evidence exists in `<repo>/.claude/validation/`
+- validation evidence exists in `<project-workspace>/validation/`
 - output matches real objective
 - durable files are updated
 - in standard / deep / recovery: closure token (per VALIDATION_PROTOCOL §11) is included in the completion message AND in `validation/self-evaluation.md`

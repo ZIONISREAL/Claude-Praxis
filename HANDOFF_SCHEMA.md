@@ -7,7 +7,7 @@ Schemas for file-based agent handoff.
 Location:
 
 ```text
-<repo>/.claude/handoffs/outbox/
+<project-workspace>/handoffs/outbox/
 ```
 
 Template:
@@ -97,7 +97,7 @@ The packet file at `<absolute-path>` is the authoritative source of constraints,
 Location:
 
 ```text
-<repo>/.claude/handoffs/inbox/
+<project-workspace>/handoffs/inbox/
 ```
 
 Template:
@@ -159,7 +159,7 @@ Template:
 Location:
 
 ```text
-<repo>/.claude/handoffs/shared/
+<project-workspace>/handoffs/shared/
 ```
 
 Use for:

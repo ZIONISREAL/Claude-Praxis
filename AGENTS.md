@@ -65,4 +65,4 @@ A non-trivial task is complete only when:
 
 Use `VALIDATION_PROTOCOL.md` for the full closure standard.
 
-Closure token with `verifier=PASS` from `praxis doctor verify-closure` is expected in standard / deep / recovery modes. See `VERIFICATION_PROTOCOL.md`.
+Closure token with `sha256=<evidence-file-hash>` and `verifier=PASS` from `praxis doctor verify-closure <plan-id> --json --brief` is expected in standard / deep / recovery modes. See `VERIFICATION_PROTOCOL.md`.

@@ -4,6 +4,25 @@ All notable changes to this harness.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.5.0] — 2026-04-28
+
+### Added — Control Hardening
+- `rules.json` as the canonical machine-readable rule metadata source
+- `praxis doctor check --json --brief` and `verify-closure --json --brief` for agent-readable control flow
+- Closure token `sha256=<evidence-file-hash>` validation via `praxis.closure.evidence-sha256-matches`
+- Mode-aware handoff packet severity: missing packet files fail for agentic/deep/recovery dispatches
+- Static thin-dispatch approximation checking packet-backed dispatch markers and prompt size
+
+### Changed
+- `praxis` now loads rule metadata from `rules.json` instead of maintaining a parallel hardcoded registry
+- `praxis doctor --json` now emits pure JSON instead of mixing human text and JSON
+- Path language now uses `<project-workspace>`, `<runtime-home>`, and `<workspace>` variables to avoid root-style ambiguity
+- README positioning now says Praxis is "verifiable where doctor rules exist; observable elsewhere"
+- Installers include `rules.json` in required file inventories
+
+### Rationale
+v1.4 made Praxis externally verifiable, but some checks were still hard for agents to consume and rule metadata had two sources of truth. v1.5 turns doctor output into a cleaner agent control surface, binds closure evidence by content hash, and moves rule metadata into a single JSON source.
+
 ## [1.4.0] — 2026-04-28
 
 ### Added — Verification Layer

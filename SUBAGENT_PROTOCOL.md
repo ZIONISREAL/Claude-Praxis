@@ -66,7 +66,7 @@ Subagent must:
 Use:
 
 ```text
-<repo>/.claude/handoffs/outbox/
+<project-workspace>/handoffs/outbox/
 ```
 
 for task packets.
@@ -74,7 +74,7 @@ for task packets.
 Use:
 
 ```text
-<repo>/.claude/handoffs/inbox/
+<project-workspace>/handoffs/inbox/
 ```
 
 for subagent results.
@@ -82,7 +82,7 @@ for subagent results.
 Use:
 
 ```text
-<repo>/.claude/handoffs/shared/
+<project-workspace>/handoffs/shared/
 ```
 
 for shared cross-agent references.
@@ -162,7 +162,7 @@ Each override must be recorded in `.claude/logs/subagent-log.md` with the `model
 
 For any subagent task whose specification exceeds 1000 characters, the main agent MUST:
 
-1. Write the full task packet (per `HANDOFF_SCHEMA.md` §1) as a file at `<repo>/.claude/handoffs/outbox/<task-id>.md` (or `~/.claude/_meta/handoffs/outbox/<task-id>.md` for harness-meta work).
+1. Write the full task packet (per `HANDOFF_SCHEMA.md` §1) as a file at `<project-workspace>/handoffs/outbox/<task-id>.md` (or `<runtime-home>/_meta/handoffs/outbox/<task-id>.md` for harness-meta work).
 
 2. Dispatch with a thin prompt of ≤ 300 tokens, structured as:
 
@@ -180,4 +180,4 @@ Inlining a 5K-token specification into the Agent tool prompt copies that text in
 
 ### Verification
 
-A dispatch is non-compliant if the prompt exceeds 300 tokens AND the spec exceeds 1000 characters. Audit subagents and self-evaluation should flag this.
+A dispatch is non-compliant if the prompt exceeds 300 tokens AND the spec exceeds 1000 characters. `praxis doctor check` performs a static approximation: it looks for packet-backed dispatches, verifies packet existence, checks for a `Task packet:` dispatch marker, and warns when the logged dispatch target is over approximately 300 tokens. Audit subagents and self-evaluation should still flag cases that require prompt-history judgment.

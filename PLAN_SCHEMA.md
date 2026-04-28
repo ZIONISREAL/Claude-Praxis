@@ -7,13 +7,13 @@ Schema for versioned plan files.
 Active plans:
 
 ```text
-<repo>/.claude/plans/active/
+<project-workspace>/plans/active/
 ```
 
 Archived plans:
 
 ```text
-<repo>/.claude/plans/archive/
+<project-workspace>/plans/archive/
 ```
 
 ## Naming

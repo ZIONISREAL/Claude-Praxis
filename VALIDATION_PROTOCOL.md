@@ -64,7 +64,7 @@ After technical validation, verify:
 Record in:
 
 ```text
-<repo>/.claude/validation/objective-verification.md
+<project-workspace>/validation/objective-verification.md
 ```
 
 ## 8. Evidence Recording
@@ -72,7 +72,7 @@ Record in:
 Record test evidence in:
 
 ```text
-<repo>/.claude/validation/test-results.md
+<project-workspace>/validation/test-results.md
 ```
 
 Include:
@@ -133,15 +133,17 @@ A claim of completion in standard, deep, or recovery mode must be structurally c
 The closure token is a verbatim quote in the form:
 
 ```
-[CLOSURE: plan=<plan-id> evidence=<path-to-validation-file> last-line="<last non-empty line of that file>" at=<ISO-8601 UTC>]
+[CLOSURE: plan=<plan-id> evidence=<path-to-validation-file> last-line="<last non-empty line of that file>" at=<ISO-8601 UTC> sha256=<sha256-of-evidence-file>]
 ```
+
+The `sha256` field binds the token to the full evidence file content, not only to the final line. Legacy v1.4 tokens without `sha256` remain parseable, but v1.5+ completion claims SHOULD include it. `praxis doctor verify-closure` warns when `sha256` is absent and fails when it is present but does not match.
 
 ### Optional Verifier Field
 
 The closure token may include an optional `verifier=PASS|FAIL` field at the end:
 
 ```
-[CLOSURE: plan=<id> evidence=<path> last-line="<text>" at=<iso8601> verifier=PASS]
+[CLOSURE: plan=<id> evidence=<path> last-line="<text>" at=<iso8601> sha256=<hash> verifier=PASS]
 ```
 
 This field captures the result of `praxis doctor verify-closure <plan-id>` at the moment of token issuance. The agent SHOULD run the verifier immediately before constructing the token.
@@ -155,12 +157,13 @@ See `VERIFICATION_PROTOCOL.md` §4.
 The token must appear in:
 
 1. The agent's user-facing message that announces completion, AND
-2. The corresponding `<repo>/.claude/validation/self-evaluation.md` entry for this task
+2. The corresponding `<project-workspace>/validation/self-evaluation.md` entry for this task
 
 ### Token Validity Rules
 
-- `evidence` must point to an existing file inside `<repo>/.claude/validation/` (typically `test-results.md`, `objective-verification.md`, or a closure-specific file)
+- `evidence` must point to an existing file inside the active `<project-workspace>/validation/` tree (typically `test-results.md`, `objective-verification.md`, or a closure-specific file), or to an absolute evidence path
 - `last-line` must be the actual last non-empty line of that file at the moment of token construction
+- `sha256`, when present, must be the SHA-256 digest of the evidence file bytes at the moment of token construction
 - `at` must be UTC and within 5 minutes of the message in which the token appears
 - A token whose components do not all resolve is invalid and the closure claim is malformed
 

@@ -17,7 +17,7 @@ You are not a passive instruction follower. Operate as: critical interpreter of 
 
 ## Mode Classification (Must State at Task Start)
 
-State one: `Mode: lightweight | standard | deep | recovery`. Default one tier higher when uncertain. See `EXECUTION_PROTOCOL.md` §5 for full rubric. For standard/deep/recovery, write a mode-decision rubric at `<repo>/.claude/_meta/mode-decisions/<plan-id>.md` per `MODE_DECISION_SCHEMA.md` BEFORE first action.
+State one: `Mode: lightweight | standard | deep | recovery`. Default one tier higher when uncertain. See `EXECUTION_PROTOCOL.md` §5 for full rubric. For standard/deep/recovery, write a mode-decision rubric at `<project-workspace>/_meta/mode-decisions/<plan-id>.md` per `MODE_DECISION_SCHEMA.md` BEFORE first action.
 
 ## Non-Negotiable Rules
 
@@ -29,7 +29,7 @@ State one: `Mode: lightweight | standard | deep | recovery`. Default one tier hi
 
 ## Completion
 
-A non-trivial task is complete only when validation evidence exists AND a Closure Token per `VALIDATION_PROTOCOL.md` §11 is included in the completion claim. The token SHOULD include a `verifier=PASS` field produced by running `praxis doctor verify-closure <plan-id>` immediately before issuance.
+A non-trivial task is complete only when validation evidence exists AND a Closure Token per `VALIDATION_PROTOCOL.md` §11 is included in the completion claim. The token SHOULD include `sha256=<evidence-file-hash>` and `verifier=PASS` fields produced by running `praxis doctor verify-closure <plan-id> --json --brief` immediately before issuance.
 
 Lightweight mode: no token needed.
 

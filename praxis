@@ -3,11 +3,12 @@
 Praxis Doctor — verification layer for Claude-Praxis harness.
 Stable rule IDs documented in RULE_REGISTRY.md.
 """
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 import argparse
 import datetime
 import glob
+import hashlib
 import json
 import os
 import re
@@ -106,9 +107,41 @@ def detect_workspace(cwd, override=None):
 # Closure token regex
 # ---------------------------------------------------------------------------
 
-CLOSURE_TOKEN_RE = re.compile(
-    r"\[CLOSURE:\s+plan=(\S+)\s+evidence=(\S+)\s+last-line=\"([^\"]*)\"\s+at=(\S+?)(?:\s+verifier=\S+)?\]"
-)
+CLOSURE_TOKEN_RE = re.compile(r"\[CLOSURE:\s+(?P<body>[^\]]+)\]")
+TOKEN_FIELD_RE = re.compile(r"([A-Za-z][A-Za-z0-9-]*)=(\"[^\"]*\"|\S+)")
+
+
+def _parse_closure_token(content):
+    """Return (token_text, fields) for the first closure token in content."""
+    m = CLOSURE_TOKEN_RE.search(content)
+    if not m:
+        return (None, None)
+    fields = {}
+    for key, raw in TOKEN_FIELD_RE.findall(m.group("body")):
+        if raw.startswith('"') and raw.endswith('"'):
+            fields[key] = raw[1:-1]
+        else:
+            fields[key] = raw
+    return (m.group(0), fields)
+
+
+def _resolve_evidence_path(workspace, evidence_path):
+    if not evidence_path:
+        return None
+    if os.path.isfile(evidence_path):
+        return evidence_path
+    resolved = os.path.join(workspace, evidence_path)
+    if os.path.isfile(resolved):
+        return resolved
+    return resolved
+
+
+def _sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 # ---------------------------------------------------------------------------
 # Rule implementations
@@ -120,17 +153,18 @@ def check_token_format(closure_file, workspace, plan_id):
         content = Path(closure_file).read_text(encoding="utf-8")
     except OSError as e:
         return ("FAIL", f"cannot read {closure_file}: {e}")
-    m = CLOSURE_TOKEN_RE.search(content)
-    if not m:
+    _token, fields = _parse_closure_token(content)
+    if not fields:
         return ("FAIL", f"no closure token found in {os.path.basename(closure_file)}")
-    tok_plan = m.group(1)
-    tok_evidence = m.group(2)
-    tok_last = m.group(3)
-    tok_at = m.group(4)
-    missing = [f for f, v in [("plan", tok_plan), ("evidence", tok_evidence), ("last-line", tok_last), ("at", tok_at)] if not v]
+    missing = [
+        f for f in ("plan", "evidence", "last-line", "at")
+        if not fields.get(f)
+    ]
     if missing:
         return ("FAIL", f"token missing non-empty fields: {missing}")
-    return ("PASS", f"token found: plan={tok_plan} at={tok_at}")
+    if "sha256" in fields and not re.fullmatch(r"[0-9a-fA-F]{64}", fields["sha256"]):
+        return ("FAIL", "sha256 field must be 64 hexadecimal characters")
+    return ("PASS", f"token found: plan={fields['plan']} at={fields['at']}")
 
 
 def check_evidence_exists(closure_file, workspace, plan_id):
@@ -139,16 +173,15 @@ def check_evidence_exists(closure_file, workspace, plan_id):
         content = Path(closure_file).read_text(encoding="utf-8")
     except OSError as e:
         return ("FAIL", f"cannot read {closure_file}: {e}")
-    m = CLOSURE_TOKEN_RE.search(content)
-    if not m:
+    _token, fields = _parse_closure_token(content)
+    if not fields:
         return ("FAIL", "no closure token found; cannot check evidence")
-    evidence_path = m.group(2)
-    resolved = os.path.join(workspace, evidence_path)
+    evidence_path = fields.get("evidence")
+    if not evidence_path:
+        return ("FAIL", "closure token missing evidence field")
+    resolved = _resolve_evidence_path(workspace, evidence_path)
     if os.path.isfile(resolved):
         return ("PASS", f"evidence exists: {evidence_path}")
-    # Try absolute path too
-    if os.path.isfile(evidence_path):
-        return ("PASS", f"evidence exists (absolute): {evidence_path}")
     return ("FAIL", f"evidence file not found: {evidence_path} (resolved: {resolved})")
 
 
@@ -158,17 +191,16 @@ def check_last_line_matches(closure_file, workspace, plan_id):
         content = Path(closure_file).read_text(encoding="utf-8")
     except OSError as e:
         return ("FAIL", f"cannot read {closure_file}: {e}")
-    m = CLOSURE_TOKEN_RE.search(content)
-    if not m:
+    _token, fields = _parse_closure_token(content)
+    if not fields:
         return ("FAIL", "no closure token found; cannot check last-line")
-    tok_last = m.group(3)
-    evidence_path = m.group(2)
-    resolved = os.path.join(workspace, evidence_path)
+    tok_last = fields.get("last-line")
+    evidence_path = fields.get("evidence")
+    if tok_last is None or not evidence_path:
+        return ("FAIL", "closure token missing last-line or evidence field")
+    resolved = _resolve_evidence_path(workspace, evidence_path)
     if not os.path.isfile(resolved):
-        if os.path.isfile(evidence_path):
-            resolved = evidence_path
-        else:
-            return ("FAIL", f"evidence file not found: {resolved}")
+        return ("FAIL", f"evidence file not found: {resolved}")
     try:
         lines = Path(resolved).read_text(encoding="utf-8").splitlines()
     except OSError as e:
@@ -191,10 +223,10 @@ def check_timestamp_parseable(closure_file, workspace, plan_id):
         content = Path(closure_file).read_text(encoding="utf-8")
     except OSError as e:
         return ("FAIL", f"cannot read {closure_file}: {e}")
-    m = CLOSURE_TOKEN_RE.search(content)
-    if not m:
+    _token, fields = _parse_closure_token(content)
+    if not fields:
         return ("FAIL", "no closure token found; cannot check timestamp")
-    ts = m.group(4).rstrip("]").rstrip()
+    ts = fields.get("at", "").rstrip("]").rstrip()
     ts_normalized = ts.replace("Z", "+00:00")
     try:
         datetime.datetime.fromisoformat(ts_normalized)
@@ -203,38 +235,116 @@ def check_timestamp_parseable(closure_file, workspace, plan_id):
         return ("FAIL", f"timestamp not ISO-8601: \"{ts}\" ({e})")
 
 
+def check_evidence_sha256_matches(closure_file, workspace, plan_id):
+    """praxis.closure.evidence-sha256-matches"""
+    try:
+        content = Path(closure_file).read_text(encoding="utf-8")
+    except OSError as e:
+        return ("FAIL", f"cannot read {closure_file}: {e}")
+    _token, fields = _parse_closure_token(content)
+    if not fields:
+        return ("FAIL", "no closure token found; cannot check sha256")
+    expected = fields.get("sha256")
+    if not expected:
+        return ("WARN", "closure token has no sha256 field; legacy last-line-only binding")
+    evidence_path = fields.get("evidence")
+    if not evidence_path:
+        return ("FAIL", "closure token missing evidence field")
+    resolved = _resolve_evidence_path(workspace, evidence_path)
+    if not os.path.isfile(resolved):
+        return ("FAIL", f"evidence file not found: {resolved}")
+    try:
+        actual = _sha256_file(resolved)
+    except OSError as e:
+        return ("FAIL", f"cannot hash evidence file: {e}")
+    if actual.lower() == expected.lower():
+        return ("PASS", f"sha256 matches: {actual}")
+    return ("FAIL", f"sha256 mismatch\n       expected: {expected}\n       actual:   {actual}")
+
+
+def _read_plan_id(path):
+    try:
+        content = Path(path).read_text(encoding="utf-8")
+    except OSError:
+        return None
+    m = re.search(r"^##\s+Plan ID\s*\n+([^\n]+)", content, re.MULTILINE)
+    if m:
+        return m.group(1).strip().strip("`")
+    return None
+
+
+def _find_plan_files(workspace):
+    patterns = [
+        os.path.join(workspace, "plans", "active", "*.md"),
+        os.path.join(workspace, "_meta", "plan-v*.md"),
+        os.path.join(workspace, "plan-v*.md"),
+    ]
+    found = []
+    for pat in patterns:
+        found.extend(glob.glob(pat))
+    return sorted(set(found))
+
+
+def _find_plan_ids(workspace):
+    ids = []
+    for path in _find_plan_files(workspace):
+        pid = _read_plan_id(path)
+        if pid:
+            ids.append(pid)
+    return sorted(set(ids))
+
+
+def _execution_log_candidates(workspace):
+    return [
+        os.path.join(workspace, "logs", "execution-log.md"),
+        os.path.join(workspace, "_meta", "execution-log.md"),
+        os.path.join(workspace, "execution-log.md"),
+    ]
+
+
+def _self_eval_candidates(workspace):
+    return [
+        os.path.join(workspace, "validation", "self-evaluation.md"),
+        os.path.join(workspace, "_meta", "validation", "self-evaluation.md"),
+        os.path.join(workspace, "self-evaluation.md"),
+    ]
+
+
+def _handoff_outbox_dirs(workspace):
+    return [
+        os.path.join(workspace, "handoffs", "outbox"),
+        os.path.join(workspace, "_meta", "handoffs", "outbox"),
+    ]
+
+
 def check_mode_rubric_exists(closure_file, workspace, plan_id):
     """praxis.mode.rubric-exists"""
-    rubric_path = os.path.join(workspace, "_meta", "mode-decisions", f"{plan_id}.md")
-    if os.path.isfile(rubric_path):
-        return ("PASS", f"mode rubric exists: _meta/mode-decisions/{plan_id}.md")
-    return ("FAIL", f"mode rubric not found: {rubric_path}")
+    plan_ids = [plan_id] if plan_id else _find_plan_ids(workspace)
+    if not plan_ids:
+        return ("INFO", "no active plan IDs found; mode rubric check not applicable")
+
+    missing = []
+    for pid in plan_ids:
+        rubric_path = os.path.join(workspace, "_meta", "mode-decisions", f"{pid}.md")
+        if not os.path.isfile(rubric_path):
+            missing.append(pid)
+    if not missing:
+        return ("PASS", f"mode rubric exists for {len(plan_ids)} plan(s)")
+    return ("FAIL", f"mode rubric missing for: {', '.join(missing)}")
 
 
 def check_plan_exists(closure_file, workspace, plan_id):
     """praxis.plan.exists"""
-    # For harness-meta, look in _meta/; otherwise plans/active/
-    patterns = [
-        os.path.join(workspace, "plans", "active", "plan-v*.md"),
-        os.path.join(workspace, "_meta", "plan-v*.md"),
-        os.path.join(workspace, "plan-v*.md"),
-    ]
-    for pat in patterns:
-        found = glob.glob(pat)
-        if found:
-            names = [os.path.basename(f) for f in found]
-            return ("PASS", f"plan file(s) found: {', '.join(names)}")
+    found = _find_plan_files(workspace)
+    if found:
+        names = [os.path.basename(f) for f in found]
+        return ("PASS", f"plan file(s) found: {', '.join(names)}")
     return ("FAIL", "no plan-v*.md found in plans/active/ or _meta/")
 
 
 def check_eval_skipped(closure_file, workspace, plan_id):
     """praxis.eval.skipped-non-empty"""
-    candidates = [
-        os.path.join(workspace, "self-evaluation.md"),
-        os.path.join(workspace, "_meta", "self-evaluation.md"),
-        os.path.join(workspace, "validation", "self-evaluation.md"),
-    ]
-    for path in candidates:
+    for path in _self_eval_candidates(workspace):
         if os.path.isfile(path):
             try:
                 content = Path(path).read_text(encoding="utf-8")
@@ -254,12 +364,8 @@ def check_eval_skipped(closure_file, workspace, plan_id):
 
 def check_log_article_tagged(closure_file, workspace, plan_id):
     """praxis.log.article-tagged"""
-    candidates = [
-        os.path.join(workspace, "execution-log.md"),
-        os.path.join(workspace, "_meta", "execution-log.md"),
-    ]
     tag_re = re.compile(r"\[§\d+")
-    for path in candidates:
+    for path in _execution_log_candidates(workspace):
         if os.path.isfile(path):
             try:
                 lines = Path(path).read_text(encoding="utf-8").splitlines()
@@ -276,35 +382,116 @@ def check_log_article_tagged(closure_file, workspace, plan_id):
 
 def check_handoff_packet_exists(closure_file, workspace, plan_id):
     """praxis.handoff.packet-exists"""
-    candidates = [
-        os.path.join(workspace, "execution-log.md"),
-        os.path.join(workspace, "_meta", "execution-log.md"),
-    ]
-    dispatch_re = re.compile(r"dispatch-subagent\s+(\S+)", re.IGNORECASE)
-    for path in candidates:
+    dispatches = _find_dispatches(workspace)
+    if dispatches is None:
+        return ("INFO", "no execution-log.md found; skipping check")
+    if not dispatches:
+        return ("PASS", "no subagent dispatches found in execution-log.md")
+
+    missing = []
+    deep_missing = []
+    for dispatch in dispatches:
+        packet = _find_packet_file(workspace, dispatch["task_id"])
+        if not packet:
+            missing.append(dispatch["task_id"])
+            if dispatch.get("mode") in ("agentic", "deep", "recovery"):
+                deep_missing.append(dispatch["task_id"])
+    if missing:
+        msg = f"no packet found for: {', '.join(missing)}"
+        if deep_missing:
+            return ("FAIL", msg + " (mode-aware escalation for agentic/deep/recovery dispatch)")
+        return ("WARN", msg)
+    return ("PASS", f"all {len(dispatches)} dispatch(es) have packet files")
+
+
+def _find_dispatches(workspace):
+    dispatches = []
+    saw_log = False
+    for path in _execution_log_candidates(workspace):
         if os.path.isfile(path):
+            saw_log = True
             try:
-                content = Path(path).read_text(encoding="utf-8")
+                lines = Path(path).read_text(encoding="utf-8").splitlines()
             except OSError:
                 continue
-            dispatches = dispatch_re.findall(content)
-            if not dispatches:
-                return ("PASS", "no subagent dispatches found in execution-log.md")
-            missing = []
-            outbox = os.path.join(workspace, "_meta", "handoffs", "outbox")
-            for sa_id in dispatches:
-                packet = os.path.join(outbox, f"{sa_id}.md")
-                if not os.path.isfile(packet):
-                    missing.append(sa_id)
-            if missing:
-                return ("WARN", f"no packet found for: {', '.join(missing)}")
-            return ("PASS", f"all {len(dispatches)} dispatch(es) have packet files")
-    return ("INFO", "no execution-log.md found; skipping check")
+            for line in lines:
+                if "dispatch-subagent" not in line:
+                    continue
+                fields = line.split("\t")
+                mode = fields[1].strip() if len(fields) > 1 else "unknown"
+                target = fields[4].strip() if len(fields) > 4 else line
+                task_id = _extract_dispatch_task_id(target)
+                dispatches.append({
+                    "task_id": task_id,
+                    "mode": mode,
+                    "target": target,
+                    "line": line,
+                })
+    if not saw_log:
+        return None
+    return dispatches
+
+
+def _extract_dispatch_task_id(target):
+    for pattern in (
+        r"\btask-id=([A-Za-z0-9_.-]+)",
+        r"\btask=([A-Za-z0-9_.-]+)",
+        r"\bid=([A-Za-z0-9_.-]+)",
+        r"\bpacket=([A-Za-z0-9_.-]+)",
+        r"Task packet:\s*([A-Za-z0-9_.-]+)",
+    ):
+        m = re.search(pattern, target)
+        if m:
+            return m.group(1).removesuffix(".md")
+
+    cleaned = re.sub(r"\[[^\]]+\]", " ", target)
+    tokens = [t for t in cleaned.split() if "=" not in t and not t.startswith("[")]
+    return tokens[0].removesuffix(".md") if tokens else "unknown-dispatch"
+
+
+def _find_packet_file(workspace, task_id):
+    if not task_id:
+        return None
+    names = [task_id, f"{task_id}.md"]
+    for outbox in _handoff_outbox_dirs(workspace):
+        for name in names:
+            path = os.path.join(outbox, name)
+            if os.path.isfile(path):
+                return path
+    return None
 
 
 def check_thin_dispatch(closure_file, workspace, plan_id):
-    """praxis.handoff.thin-dispatch — manual"""
-    return ("INFO", "requires prompt history; manual review only")
+    """praxis.handoff.thin-dispatch"""
+    dispatches = _find_dispatches(workspace)
+    if dispatches is None:
+        return ("INFO", "no execution-log.md found; skipping check")
+    if not dispatches:
+        return ("PASS", "no subagent dispatches found in execution-log.md")
+
+    warnings = []
+    checked = 0
+    for dispatch in dispatches:
+        packet = _find_packet_file(workspace, dispatch["task_id"])
+        if not packet:
+            continue
+        try:
+            text = Path(packet).read_text(encoding="utf-8")
+        except OSError:
+            continue
+        checked += 1
+        line_tokens = len(dispatch["target"].split())
+        has_packet_marker = "Task packet:" in dispatch["target"] or "task-packet" in dispatch["target"].lower()
+        if len(text) > 1000 and not has_packet_marker:
+            warnings.append(f"{dispatch['task_id']} long packet lacks Task packet: dispatch marker")
+        if line_tokens > 300:
+            warnings.append(f"{dispatch['task_id']} dispatch target is ~{line_tokens} tokens (>300)")
+
+    if warnings:
+        return ("WARN", "; ".join(warnings))
+    if checked:
+        return ("PASS", f"thin-dispatch approximation passed for {checked} packet-backed dispatch(es)")
+    return ("INFO", "dispatches found but no packet files available; packet-exists rule covers this")
 
 
 def check_plan_id_stable(closure_file, workspace, plan_id):
@@ -316,129 +503,48 @@ def check_plan_id_stable(closure_file, workspace, plan_id):
 # Rule registry
 # ---------------------------------------------------------------------------
 
-RULES = [
-    {
-        "id": "praxis.closure.token-format",
-        "severity": "error",
-        "tier": 1,
-        "description": (
-            "A closure token must match "
-            "[CLOSURE: plan=<id> evidence=<path> last-line=\"<text>\" at=<iso8601>] "
-            "regex with all four fields present and non-empty."
-        ),
-        "implemented": True,
-        "check": check_token_format,
-    },
-    {
-        "id": "praxis.closure.evidence-exists",
-        "severity": "error",
-        "tier": 1,
-        "description": (
-            "The evidence path resolved relative to the workspace root must point "
-            "to an existing file."
-        ),
-        "implemented": True,
-        "check": check_evidence_exists,
-    },
-    {
-        "id": "praxis.closure.last-line-matches",
-        "severity": "error",
-        "tier": 1,
-        "description": (
-            "The token's last-line must equal the actual last non-empty line of the "
-            "evidence file (after stripping trailing whitespace)."
-        ),
-        "implemented": True,
-        "check": check_last_line_matches,
-    },
-    {
-        "id": "praxis.closure.timestamp-parseable",
-        "severity": "error",
-        "tier": 1,
-        "description": (
-            "The token's at field must parse as ISO-8601 UTC "
-            "(Z suffix or +00:00 offset)."
-        ),
-        "implemented": True,
-        "check": check_timestamp_parseable,
-    },
-    {
-        "id": "praxis.mode.rubric-exists",
-        "severity": "error",
-        "tier": 1,
-        "description": (
-            "For a non-lightweight plan, _meta/mode-decisions/<plan-id>.md must exist."
-        ),
-        "implemented": True,
-        "check": check_mode_rubric_exists,
-    },
-    {
-        "id": "praxis.plan.exists",
-        "severity": "error",
-        "tier": 1,
-        "description": (
-            "For a non-lightweight task, an active plan file plan-vNNN.md must exist "
-            "in plans/active/ or _meta/ for harness-meta workspaces."
-        ),
-        "implemented": True,
-        "check": check_plan_exists,
-    },
-    {
-        "id": "praxis.eval.skipped-non-empty",
-        "severity": "warning",
-        "tier": 2,
-        "description": (
-            "SELF_EVALUATION's Skipped Rules section must have at least one entry "
-            "for non-lightweight tasks (false purity is suspect)."
-        ),
-        "implemented": True,
-        "check": check_eval_skipped,
-    },
-    {
-        "id": "praxis.log.article-tagged",
-        "severity": "warning",
-        "tier": 2,
-        "description": (
-            "Decision-class actions in execution-log.md must carry [§N rule-name] tags."
-        ),
-        "implemented": True,
-        "check": check_log_article_tagged,
-    },
-    {
-        "id": "praxis.handoff.packet-exists",
-        "severity": "warning",
-        "tier": 2,
-        "description": (
-            "Each subagent dispatch recorded in execution-log should have a "
-            "corresponding packet file in handoffs/outbox/."
-        ),
-        "implemented": True,
-        "check": check_handoff_packet_exists,
-    },
-    {
-        "id": "praxis.handoff.thin-dispatch",
-        "severity": "info",
-        "tier": 3,
-        "description": (
-            "Subagent dispatches with spec >1000 chars must use <=300 token prompts. "
-            "NOT IMPLEMENTABLE without prompt-history access; manual review only."
-        ),
-        "implemented": False,
-        "check": check_thin_dispatch,
-    },
-    {
-        "id": "praxis.plan.id-stable",
-        "severity": "info",
-        "tier": 3,
-        "description": (
-            "Plan ID slug must not change across versions of the same plan. "
-            "Requires cross-version comparison; manual review for v1.4."
-        ),
-        "implemented": False,
-        "check": check_plan_id_stable,
-    },
-]
+CHECK_FUNCTIONS = {
+    "praxis.closure.token-format": check_token_format,
+    "praxis.closure.evidence-exists": check_evidence_exists,
+    "praxis.closure.last-line-matches": check_last_line_matches,
+    "praxis.closure.timestamp-parseable": check_timestamp_parseable,
+    "praxis.closure.evidence-sha256-matches": check_evidence_sha256_matches,
+    "praxis.mode.rubric-exists": check_mode_rubric_exists,
+    "praxis.plan.exists": check_plan_exists,
+    "praxis.eval.skipped-non-empty": check_eval_skipped,
+    "praxis.log.article-tagged": check_log_article_tagged,
+    "praxis.handoff.packet-exists": check_handoff_packet_exists,
+    "praxis.handoff.thin-dispatch": check_thin_dispatch,
+    "praxis.plan.id-stable": check_plan_id_stable,
+}
 
+
+def _manual_check(closure_file, workspace, plan_id):
+    return ("INFO", "manual review only")
+
+
+def _load_rules():
+    rules_path = Path(__file__).with_name("rules.json")
+    try:
+        payload = json.loads(rules_path.read_text(encoding="utf-8"))
+    except OSError as e:
+        print(f"error: cannot read rules source {rules_path}: {e}", file=sys.stderr)
+        sys.exit(2)
+    except json.JSONDecodeError as e:
+        print(f"error: invalid rules source {rules_path}: {e}", file=sys.stderr)
+        sys.exit(2)
+
+    rules = []
+    for meta in payload.get("rules", []):
+        rule = dict(meta)
+        check = CHECK_FUNCTIONS.get(rule["id"], _manual_check)
+        rule["check"] = check
+        rule["implemented"] = check is not _manual_check and rule.get("check_status") != "manual"
+        rules.append(rule)
+    return rules
+
+
+RULES = _load_rules()
 CLOSURE_RULE_IDS = {r["id"] for r in RULES if r["id"].startswith("praxis.closure.")}
 
 
@@ -475,7 +581,13 @@ def _run_rules(rules, closure_file, workspace, plan_id):
     results = []
     for rule in rules:
         status, message = rule["check"](closure_file, workspace, plan_id)
-        results.append({"rule": rule["id"], "status": status, "message": message})
+        results.append({
+            "rule": rule["id"],
+            "status": status,
+            "severity": rule.get("severity", "info"),
+            "tier": rule.get("tier"),
+            "message": message,
+        })
     return results
 
 
@@ -484,6 +596,24 @@ def _count(results):
     for r in results:
         counts[r["status"].lower()] = counts.get(r["status"].lower(), 0) + 1
     return counts
+
+
+def _json_payload(payload, brief=False):
+    if brief:
+        payload = dict(payload)
+        if "results" in payload:
+            payload["results"] = [
+                r for r in payload.get("results", [])
+                if r.get("status") != "PASS"
+            ]
+        return json.dumps(payload, separators=(",", ":"))
+    return json.dumps(payload, indent=2)
+
+
+def _print_result_set(results, brief=False):
+    visible = [r for r in results if not brief or r["status"] != "PASS"]
+    for res in visible:
+        print(_fmt_result(res["rule"], res["status"], res["message"]))
 
 
 def _find_closure_files(workspace):
@@ -541,6 +671,16 @@ def _locate_closure_file(workspace, plan_id):
 # ---------------------------------------------------------------------------
 
 def cmd_list_rules(args):
+    if getattr(args, "json", False):
+        payload = {
+            "version": __version__,
+            "rules": [
+                {k: v for k, v in rule.items() if k != "check"}
+                for rule in RULES
+            ],
+        }
+        print(_json_payload(payload, brief=getattr(args, "brief", False)))
+        return 0
     header = f"{'ID':<45} {'SEVERITY':<10} {'IMPLEMENTED'}"
     print(header)
     print("-" * len(header))
@@ -557,49 +697,62 @@ def cmd_explain(args):
             print(f"{rule['id']} (severity={rule['severity']}, tier={rule['tier']})")
             print()
             print(rule["description"])
+            if rule.get("constitutional_reference"):
+                print()
+                print(f"Reference: {rule['constitutional_reference']}")
             return 0
     print(f"error: unknown rule id: {rule_id}", file=sys.stderr)
     return 1
 
 
 def cmd_check(args, workspace, runtime, lint_mode=False):
-    print(f"Praxis Doctor v{__version__} — workspace: {workspace} (runtime: {runtime})")
+    human = not getattr(args, "json", False)
+    brief = getattr(args, "brief", False)
+    if human:
+        print(f"Praxis Doctor v{__version__} — workspace: {workspace} (runtime: {runtime})")
     closure_files = _find_closure_files(workspace)
     all_results = []
 
     if closure_files:
         for cf in closure_files:
             pid = _plan_id_from_filename(cf)
-            print(f"\n--- closure: {pid} ---")
+            if human and not brief:
+                print(f"\n--- closure: {pid} ---")
             closure_rules = [r for r in RULES if r["id"] in CLOSURE_RULE_IDS]
             results = _run_rules(closure_rules, cf, workspace, pid)
-            for res in results:
-                print(_fmt_result(res["rule"], res["status"], res["message"]))
+            if human:
+                _print_result_set(results, brief=brief)
             all_results.extend([dict(r, subject=pid) for r in results])
     else:
-        print("\n(no closure files found)")
+        if human and not brief:
+            print("\n(no closure files found)")
 
     # Workspace-level rules (non-closure)
-    print("\n--- workspace ---")
+    if human and not brief:
+        print("\n--- workspace ---")
     ws_rules = [r for r in RULES if r["id"] not in CLOSURE_RULE_IDS]
     ws_results = _run_rules(ws_rules, None, workspace, None)
-    for res in ws_results:
-        print(_fmt_result(res["rule"], res["status"], res["message"]))
+    if human:
+        _print_result_set(ws_results, brief=brief)
     all_results.extend([dict(r, subject="workspace") for r in ws_results])
 
     counts = _count(all_results)
-    _print_summary(counts)
+    exit_code = 0 if (counts.get("fail", 0) == 0 or lint_mode) else 1
 
-    if args.json:
+    if human:
+        _print_summary(counts)
+        if brief:
+            print(f"Exit code: {exit_code}")
+    else:
         out = {
             "version": __version__,
             "workspace": workspace,
             "runtime": runtime,
             "results": all_results,
             "summary": counts,
-            "exit_code": 0 if (counts.get("fail", 0) == 0 or lint_mode) else 1,
+            "exit_code": exit_code,
         }
-        print(json.dumps(out, indent=2))
+        print(_json_payload(out, brief=brief))
 
     if lint_mode:
         return 0
@@ -681,19 +834,26 @@ def cmd_verify_closure(args, workspace, runtime):
         temp_path = tf.name
 
     try:
-        print(f"Praxis Doctor v{__version__} — verify-closure: {plan_id}")
-        print(f"workspace: {workspace} (runtime: {runtime})")
-        print(f"token source: {source_label}\n")
+        human = not getattr(args, "json", False)
+        brief = getattr(args, "brief", False)
+        if human:
+            print(f"Praxis Doctor v{__version__} — verify-closure: {plan_id}")
+            print(f"workspace: {workspace} (runtime: {runtime})")
+            print(f"token source: {source_label}\n")
 
         closure_rules = [r for r in RULES if r["id"] in CLOSURE_RULE_IDS]
         results = _run_rules(closure_rules, temp_path, workspace, plan_id)
-        for res in results:
-            print(_fmt_result(res["rule"], res["status"], res["message"]))
+        if human:
+            _print_result_set(results, brief=brief)
 
         counts = _count(results)
-        _print_summary(counts)
+        exit_code = 0 if counts.get("fail", 0) == 0 else 1
 
-        if args.json:
+        if human:
+            _print_summary(counts)
+            if brief:
+                print(f"Exit code: {exit_code}")
+        else:
             out = {
                 "version": __version__,
                 "workspace": workspace,
@@ -702,9 +862,9 @@ def cmd_verify_closure(args, workspace, runtime):
                 "token_source": source_label,
                 "results": [dict(r, subject=plan_id) for r in results],
                 "summary": counts,
-                "exit_code": 0 if counts.get("fail", 0) == 0 else 1,
+                "exit_code": exit_code,
             }
-            print(json.dumps(out, indent=2))
+            print(_json_payload(out, brief=brief))
     finally:
         try:
             os.unlink(temp_path)
@@ -743,6 +903,7 @@ def main():
     # doctor check
     check_parser = doctor_sub.add_parser("check", help="run all checks; exit 1 on any FAIL")
     check_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
+    check_parser.add_argument("--brief", action="store_true", help="compact output for agent control flow")
     check_parser.add_argument("--workspace", metavar="PATH", default=None, help="override workspace auto-detection")
 
     # doctor verify-closure
@@ -751,15 +912,19 @@ def main():
     vc_parser.add_argument("--token", metavar="STR", default=None,
                            help="explicit closure token text (overrides self-eval / file search)")
     vc_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
+    vc_parser.add_argument("--brief", action="store_true", help="compact output for agent control flow")
     vc_parser.add_argument("--workspace", metavar="PATH", default=None, help="override workspace auto-detection")
 
     # doctor lint
     lint_parser = doctor_sub.add_parser("lint", help="non-blocking warnings only; always exit 0")
     lint_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
+    lint_parser.add_argument("--brief", action="store_true", help="compact output for agent control flow")
     lint_parser.add_argument("--workspace", metavar="PATH", default=None, help="override workspace auto-detection")
 
     # doctor list-rules
     lr_parser = doctor_sub.add_parser("list-rules", help="print rule IDs with severity")
+    lr_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
+    lr_parser.add_argument("--brief", action="store_true", help="compact JSON output")
 
     # doctor explain
     exp_parser = doctor_sub.add_parser("explain", help="print description of one rule")

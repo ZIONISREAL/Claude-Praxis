@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "id": "praxis.closure.token-format",
+      "stability": "stable",
+      "area": "closure",
+      "severity": "error",
+      "tier": 1,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "A closure token in a completion claim must match the required field structure with non-empty plan, evidence, last-line, and at fields. v1.5 tokens may also include sha256 and verifier fields.",
+      "constitutional_reference": "CONSTITUTION §9; VALIDATION_PROTOCOL §11",
+      "check_status": "implemented",
+      "doctor_command": "praxis doctor verify-closure <plan-id>"
+    },
+    {
+      "id": "praxis.closure.evidence-exists",
+      "stability": "stable",
+      "area": "closure",
+      "severity": "error",
+      "tier": 1,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "The path in the token's evidence field must point to an existing file relative to the active Praxis workspace, or be an absolute existing path.",
+      "constitutional_reference": "CONSTITUTION §5; VALIDATION_PROTOCOL §11",
+      "check_status": "implemented",
+      "doctor_command": "praxis doctor verify-closure <plan-id>"
+    },
+    {
+      "id": "praxis.closure.last-line-matches",
+      "stability": "stable",
+      "area": "closure",
+      "severity": "error",
+      "tier": 1,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "The token's last-line value must equal the actual last non-empty line of the referenced evidence file after stripping trailing whitespace.",
+      "constitutional_reference": "CONSTITUTION §9; VALIDATION_PROTOCOL §11",
+      "check_status": "implemented",
+      "doctor_command": "praxis doctor verify-closure <plan-id>"
+    },
+    {
+      "id": "praxis.closure.timestamp-parseable",
+      "stability": "stable",
+      "area": "closure",
+      "severity": "error",
+      "tier": 1,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "The token's at field must parse as ISO-8601 UTC.",
+      "constitutional_reference": "VALIDATION_PROTOCOL §11",
+      "check_status": "implemented",
+      "doctor_command": "praxis doctor verify-closure <plan-id>"
+    },
+    {
+      "id": "praxis.closure.evidence-sha256-matches",
+      "stability": "provisional",
+      "area": "closure",
+      "severity": "warning",
+      "tier": 2,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "When a closure token includes sha256, the digest must match the referenced evidence file. Missing sha256 is treated as legacy last-line-only binding and reported as a warning.",
+      "constitutional_reference": "CONSTITUTION §9; VALIDATION_PROTOCOL §11",
+      "check_status": "implemented",
+      "doctor_command": "praxis doctor verify-closure <plan-id>"
+    },
+    {
+      "id": "praxis.mode.rubric-exists",
+      "stability": "stable",
+      "area": "mode",
+      "severity": "error",
+      "tier": 1,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "Non-lightweight modes must produce a mode-decision rubric file at <workspace>/_meta/mode-decisions/<plan-id>.md per MODE_DECISION_SCHEMA.md.",
+      "constitutional_reference": "CONSTITUTION §5; CLAUDE.md/AGENTS.md Mode Classification",
+      "check_status": "implemented",
+      "doctor_command": "praxis doctor check"
+    },
+    {
+      "id": "praxis.plan.exists",
+      "stability": "stable",
+      "area": "plan",
+      "severity": "error",
+      "tier": 1,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "Non-lightweight tasks must have an active plan file in <workspace>/plans/active/ or in _meta/ for harness-meta workspaces.",
+      "constitutional_reference": "CONSTITUTION §7",
+      "check_status": "implemented",
+      "doctor_command": "praxis doctor check"
+    },
+    {
+      "id": "praxis.eval.skipped-non-empty",
+      "stability": "provisional",
+      "area": "eval",
+      "severity": "warning",
+      "tier": 2,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "SELF_EVALUATION's Skipped Rules section must have at least one entry. False purity is suspect by default.",
+      "constitutional_reference": "SELF_EVALUATION_PROTOCOL §5",
+      "check_status": "basic",
+      "doctor_command": "praxis doctor check"
+    },
+    {
+      "id": "praxis.log.article-tagged",
+      "stability": "provisional",
+      "area": "log",
+      "severity": "warning",
+      "tier": 2,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "Decision-class actions in execution-log.md must carry constitutional article tags in [§N rule-name] format.",
+      "constitutional_reference": "PROJECT_STRUCTURE_SPEC §11",
+      "check_status": "basic",
+      "doctor_command": "praxis doctor check"
+    },
+    {
+      "id": "praxis.handoff.packet-exists",
+      "stability": "provisional",
+      "area": "handoff",
+      "severity": "mode-aware",
+      "tier": 2,
+      "applies_to": ["standard", "deep", "recovery"],
+      "description": "Each subagent dispatch in execution-log.md should have a corresponding packet file in handoffs/outbox/<task-id>.md. Missing packets warn in standard mode and fail in agentic, deep, or recovery dispatches.",
+      "constitutional_reference": "SUBAGENT_PROTOCOL §11; HANDOFF_SCHEMA §1",
+      "check_status": "basic",
+      "doctor_command": "praxis doctor check"
+    },
+    {
+      "id": "praxis.handoff.thin-dispatch",
+      "stability": "provisional",
+      "area": "handoff",
+      "severity": "warning",
+      "tier": 2,
+      "applies_to": ["standard", "deep"],
+      "description": "Static approximation that long packet-backed dispatches should use a thin prompt marker such as 'Task packet:' and keep the dispatch target under approximately 300 tokens.",
+      "constitutional_reference": "SUBAGENT_PROTOCOL §11",
+      "check_status": "basic",
+      "doctor_command": "praxis doctor check"
+    },
+    {
+      "id": "praxis.plan.id-stable",
+      "stability": "provisional",
+      "area": "plan",
+      "severity": "info",
+      "tier": 3,
+      "applies_to": ["any"],
+      "description": "A plan's slug component must remain stable across versions. Only the vNNN suffix may change.",
+      "constitutional_reference": "PLAN_SCHEMA Naming; CONSTITUTION §12",
+      "check_status": "manual",
+      "doctor_command": "praxis doctor lint"
+    }
+  ]
+}

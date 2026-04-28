@@ -20,7 +20,7 @@ Skip for lightweight mode unless user requests it.
 ## 3. Output Location
 
 ```text
-<repo>/.claude/validation/self-evaluation.md
+<project-workspace>/validation/self-evaluation.md
 ```
 
 Append-mode. One entry per closed task.

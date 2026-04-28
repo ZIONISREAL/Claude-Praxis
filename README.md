@@ -115,25 +115,25 @@ Open Codex in any project and try the same kind of real task. Codex-Praxis uses 
 
 ---
 
-## Latest — v1.4.0
+## Latest — v1.5.0
 
-v1.4.0 ships the **Verification Layer** — `praxis doctor` CLI with stable rule IDs and PASS/FAIL judgments.
+v1.5.0 ships **Control Hardening** — `praxis doctor` now has pure JSON control output, rule metadata comes from `rules.json`, closure tokens can bind evidence by SHA-256, and handoff checks are mode-aware.
 
 ```bash
-praxis doctor check                          # audit current workspace
-praxis doctor verify-closure <plan-id>       # strict closure verification
-praxis doctor list-rules                     # enumerate stable rule IDs
+praxis doctor check --json --brief                 # agent-readable workspace verdict
+praxis doctor verify-closure <plan-id> --json --brief
+praxis doctor list-rules --json                    # enumerate rules from rules.json
 ```
 
-The closure token now supports an optional `verifier=PASS` field produced by the doctor immediately before issuance. An audit reader can reproduce the verdict.
+The closure token now supports `sha256=<evidence-file-hash>` plus `verifier=PASS`. An audit reader can reproduce the verdict and detect evidence edits even when the last line is unchanged.
 
-| Layer | v1.x Mechanism | v1.4 Status |
+| Layer | v1.x Mechanism | v1.5 Status |
 |---|---|---|
 | Externalization | plans, mode rubrics, logs, evidence files | high |
 | Reflection | mandatory reads, self-eval, evidence pointers | medium |
-| Verification | **`praxis doctor` CLI + stable rule IDs** | medium → high |
+| Verification | **`praxis doctor` CLI + `rules.json` + stable rule IDs** | verifiable where doctor rules exist; observable elsewhere |
 
-[v1.4.0 release notes](https://github.com/ZIONISREAL/Claude-Praxis/releases/tag/v1.4.0) · [VERIFICATION_PROTOCOL.md](VERIFICATION_PROTOCOL.md) · [RULE_REGISTRY.md](RULE_REGISTRY.md) · [CHANGELOG](CHANGELOG.md)
+[VERIFICATION_PROTOCOL.md](VERIFICATION_PROTOCOL.md) · [RULE_REGISTRY.md](RULE_REGISTRY.md) · [rules.json](rules.json) · [CHANGELOG](CHANGELOG.md)
 
 ## Token Reduction — v1.2.0
 
@@ -235,13 +235,13 @@ For each mechanism: the problem addressed, the chosen design, why this design ov
 
 **Addresses:** failure mode (a) — mode under-classification bias.
 
-**Mechanism:** Before taking any first action, standard / deep / recovery mode tasks must write a mode-decision file at `<repo>/.claude/_meta/mode-decisions/<plan-id>.md`, conforming to `MODE_DECISION_SCHEMA.md`. The schema contains a quantitative rubric: file count, tool-call estimate, domain count, production path exposure, multi-phase flag, and other measurable criteria. The classification decision is derived from these numbers, not from impressionistic judgment.
+**Mechanism:** Before taking any first action, standard / deep / recovery mode tasks must write a mode-decision file at `<project-workspace>/_meta/mode-decisions/<plan-id>.md`, conforming to `MODE_DECISION_SCHEMA.md`. The schema contains a quantitative rubric: file count, tool-call estimate, domain count, production path exposure, multi-phase flag, and other measurable criteria. The classification decision is derived from these numbers, not from impressionistic judgment.
 
 **Why this over alternatives:** An adversarial "argue both sides" mechanism was considered — have the agent explicitly argue for a higher mode before accepting the lower one. This was rejected in favor of a quantitative rubric. The rubric is checkable post-hoc by any reviewer without knowing the original context. Argumentation is not.
 
 **Lightweight mode is exempt.** The zero-friction principle for trivial tasks is preserved. The rubric applies only when a formal mode is chosen.
 
-**Artifact location:** `<repo>/.claude/_meta/mode-decisions/<plan-id>.md`
+**Artifact location:** `<project-workspace>/_meta/mode-decisions/<plan-id>.md`
 
 ---
 
@@ -255,13 +255,13 @@ For each mechanism: the problem addressed, the chosen design, why this design ov
 [CLOSURE: plan=<plan-id> evidence=<path> last-line="<last non-empty line of evidence file>" at=<ISO-8601>]
 ```
 
-The `last-line` field must contain the actual last non-empty line of the referenced evidence file. The message is syntactically incomplete — and therefore suspect — without it.
+v1.5+ closure tokens should add `sha256=<evidence-file-hash>` and `verifier=PASS`. The `last-line` field must contain the actual last non-empty line of the referenced evidence file; `sha256` binds the token to the full evidence content.
 
-**Why this over alternatives:** Discipline-level rules ("you must validate before claiming done") fail under completion pressure. They are also unverifiable: a rule-following message looks identical to a genuinely validated one. Format-level rules couple the claim and the evidence at the syntactic layer — the LLM cannot produce a valid closure token without also producing a valid evidence file, because the token includes a quoted fragment that must correspond to that file.
+**Why this over alternatives:** Discipline-level rules ("you must validate before claiming done") fail under completion pressure. They are also unverifiable: a rule-following message looks identical to a genuinely validated one. Format-level rules couple the claim and the evidence at the syntactic layer. With `sha256`, a verifier can also detect evidence mutation after closure.
 
 **Lightweight mode emits a simple "done."** The closure token applies only to formalized work where plan-as-files is required.
 
-**Artifact location:** `<repo>/.claude/_meta/validation/closure-<plan-id>.md`
+**Artifact location:** `<project-workspace>/_meta/validation/closure-<plan-id>.md`
 
 ---
 
@@ -278,7 +278,7 @@ The `last-line` field must contain the actual last non-empty line of the referen
 
 The forced-honesty rule on Skipped Rules counters what might be called the "false purity" failure mode. Humans skip rules under real conditions; LLMs do too. A self-evaluation with no skipped rules and no anomalies is not a sign of perfect execution — it is a sign of inattentive self-evaluation.
 
-**Artifact locations:** `<repo>/.claude/logs/execution-log.md`, `<repo>/.claude/validation/self-evaluation.md`
+**Artifact locations:** `<project-workspace>/logs/execution-log.md`, `<project-workspace>/validation/self-evaluation.md`
 
 ---
 
@@ -300,9 +300,9 @@ The actual closure token from the v1.1 batch 1 release (v1.1.0 release; see CHAN
 
 Each next batch is gated on observed v1.1 task data accumulating in `metrics/`. The harness should not evolve faster than evidence supports.
 
-### Next: 3D — Phase-Boundary Audit Subagent
+### Partly Shipped in v1.5: 3D — Phase-Boundary Audit
 
-**Why first:** Directly addresses the closure-token forgeability identified in v1.1 batch 1 validation. An audit subagent dispatched at phase boundaries re-reads the referenced evidence file and verifies that the `last-line` value in the closure token actually matches the file's content. This closes the cryptographic gap that v1.1 leaves open.
+**Current state:** `praxis doctor verify-closure` now re-reads evidence and validates both `last-line` and optional `sha256`. The remaining 3D work is automatic phase-boundary dispatch; the verifier itself exists.
 
 ### Then: 2B — Two-Stage Close
 
@@ -326,12 +326,12 @@ Implemented per user-driven baseline measurement: 4-tier read set, slimmed CLAUD
 
 v1.1 narrows the gap but does not close it. These limitations are documented here rather than buried.
 
-- **Closure-token forgeability.** The `last-line` value can be fabricated by a dishonest agent without opening the evidence file. This is undetectable without the audit subagent (3D), which does not yet exist.
+- **Closure-token forgeability is narrowed, not eliminated.** `praxis doctor` can verify `last-line` and `sha256`, but an agent can still skip running it unless the surrounding control flow demands `--json --brief` verification before closure.
 - **Mode-rubric estimation bias.** The quantitative rubric numbers (file count, tool count, domains) are agent-estimated. Estimation can itself be subject to the same downward bias the rubric was designed to correct. Mitigated by future runtime escalation (1A).
 - **Hooks are advisory.** A session that misses the SessionStart hook confirmation can proceed without the harness loaded. The hook signals non-compliance but does not prevent it.
 - **Article-tag accuracy is not validated.** An agent can mis-tag an action — marking `[§II goal-truth]` on an action governed by `§X verification]` — without triggering any error. The tag is a trace, not a proof.
 
-These are not bugs. They are the price of choosing observability over enforcement. The defenses against these residuals are accumulating evidence in `metrics/`, peer review via the future audit subagent (3D), and human inspection of the execution log.
+These are not bugs. They are the price of choosing read-only verification over hard enforcement. Praxis is verifiable where doctor rules exist and observable elsewhere. The defenses against residuals are accumulating evidence in `metrics/`, peer review, doctor JSON control flow, and human inspection of the execution log.
 
 ---
 
@@ -441,12 +441,12 @@ stateDiagram-v2
 
 ## Project Workspace
 
-For non-trivial work, Praxis creates or uses a project-local `.claude/` workspace.
+For non-trivial work, Praxis creates or uses a project-local `<project-workspace>`.
 
 For Codex, the same structure is used under `.codex/`; see `CODEX_INTEGRATION.md` for the exact path mapping.
 
 ```text
-<repo>/.claude/
+<project-workspace>/
 ├── WORKSPACE_INDEX.md
 ├── CLAUDE.md
 ├── constitution/

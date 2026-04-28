@@ -11,29 +11,29 @@ This file tells the agent what to read now.
 
 ## Active Plan
 
-- `.claude/plans/active/plan-v001.md`
+- `<project-workspace>/plans/active/plan-v001.md`
 
 ## Authoritative Files
 
 Read these first:
 
-- `.claude/CLAUDE.md`
-- `.claude/context/objective-model.md`
-- `.claude/plans/active/plan-v001.md`
-- `.claude/validation/test-strategy.md`
+- `<project-workspace>/CLAUDE.md`
+- `<project-workspace>/context/objective-model.md`
+- `<project-workspace>/plans/active/plan-v001.md`
+- `<project-workspace>/validation/test-strategy.md`
 
 ## Active Read Set
 
 Allowed project memory/context files for this execution round:
 
-- `.claude/context/project-context.md`
-- `.claude/context/architecture-context.md`
-- `.claude/context/constraints.md`
-- `.claude/memory/decisions.md`
-- `.claude/memory/findings.md`
-- `.claude/memory/assumptions.md`
-- `.claude/memory/risks.md`
-- `.claude/memory/rejected-paths.md`
+- `<project-workspace>/context/project-context.md`
+- `<project-workspace>/context/architecture-context.md`
+- `<project-workspace>/context/constraints.md`
+- `<project-workspace>/memory/decisions.md`
+- `<project-workspace>/memory/findings.md`
+- `<project-workspace>/memory/assumptions.md`
+- `<project-workspace>/memory/risks.md`
+- `<project-workspace>/memory/rejected-paths.md`
 
 ## Current Phase
 

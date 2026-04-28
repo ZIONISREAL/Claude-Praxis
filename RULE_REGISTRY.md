@@ -1,12 +1,12 @@
 # RULE_REGISTRY.md
 
-Stable identifiers for Praxis verification rules. Used by `praxis doctor` to produce machine-readable PASS / FAIL / WARN / INFO judgments.
+Human-readable projection of the Praxis verification rules. The canonical machine-readable source is `rules.json`; `praxis doctor` loads rule metadata from that file and attaches local check functions by rule ID.
 
 ## Stability Commitment
 
-Rule IDs below the `## Stable Rules` heading are **public API**. Renaming or removing a stable rule ID requires a MAJOR version bump per `MIGRATION_PROTOCOL.md`.
+Rule IDs with `"stability": "stable"` in `rules.json` are **public API**. Renaming or removing a stable rule ID requires a MAJOR version bump per `MIGRATION_PROTOCOL.md`.
 
-Rule IDs under `## Provisional Rules` may be renamed or removed in any minor version. Promote a provisional rule to stable when:
+Rule IDs with `"stability": "provisional"` may be renamed or removed in any minor version. Promote a provisional rule to stable when:
 - It has been in the registry for at least one MINOR release
 - Its check function is implemented (not "manual")
 - No semantic ambiguity has been reported
@@ -85,6 +85,15 @@ praxis.<area>.<rule>
 
 ## Provisional Rules
 
+### `praxis.closure.evidence-sha256-matches`
+
+- **Severity:** warning
+- **Applies to:** standard, deep, recovery
+- **Description:** When a closure token includes `sha256`, the digest must match the referenced evidence file. Missing `sha256` is treated as legacy last-line-only binding and reported as a warning.
+- **Constitutional reference:** §9; VALIDATION_PROTOCOL §11.
+- **Check status:** implemented (Tier 2)
+- **Doctor command:** `praxis doctor verify-closure <plan-id>`
+
 ### `praxis.eval.skipped-non-empty`
 
 - **Severity:** warning
@@ -105,7 +114,7 @@ praxis.<area>.<rule>
 
 ### `praxis.handoff.packet-exists`
 
-- **Severity:** warning
+- **Severity:** mode-aware (warning by default; error for agentic/deep/recovery dispatches)
 - **Applies to:** standard, deep, recovery
 - **Description:** Each subagent dispatch in `execution-log.md` should have a corresponding packet file in `handoffs/outbox/<task-id>.md`.
 - **Constitutional reference:** SUBAGENT_PROTOCOL §11; HANDOFF_SCHEMA §1.
@@ -114,28 +123,29 @@ praxis.<area>.<rule>
 
 ### `praxis.handoff.thin-dispatch`
 
-- **Severity:** info
+- **Severity:** warning
 - **Applies to:** standard, deep
-- **Description:** Subagent dispatches with specifications exceeding 1000 characters must use thin-dispatch prompts of ≤300 tokens. Cannot be verified without prompt-history access; manual review only in v1.4.
+- **Description:** Static approximation that packet-backed dispatches with packet files exceeding 1000 characters should use thin-dispatch prompts of ≤300 tokens and include a `Task packet:` marker in the logged dispatch target.
 - **Constitutional reference:** SUBAGENT_PROTOCOL §11.
-- **Check status:** manual (Tier 3)
-- **Doctor command:** `praxis doctor lint` (info only)
+- **Check status:** basic (Tier 2)
+- **Doctor command:** `praxis doctor check`
 
 ### `praxis.plan.id-stable`
 
 - **Severity:** info
 - **Applies to:** any plan
-- **Description:** A plan's slug component must remain stable across versions. Only the `vNNN` suffix may change. Cross-version comparison required; manual review in v1.4.
+- **Description:** A plan's slug component must remain stable across versions. Only the `vNNN` suffix may change. Cross-version comparison required; manual review in v1.5.
 - **Constitutional reference:** PLAN_SCHEMA "Naming"; CONSTITUTION §12 (Naming Stability).
 - **Check status:** manual (Tier 3)
 - **Doctor command:** `praxis doctor lint` (info only)
 
 ## How To Add a New Rule
 
-1. Propose ID under `## Provisional Rules`.
-2. Implement check in `praxis` CLI; mark severity.
+1. Add the rule metadata to `rules.json` with `"stability": "provisional"`.
+2. Implement the check in the `praxis` CLI and map it by rule ID.
 3. Reference the rule from at least one existing protocol where it applies.
-4. After one MINOR release, propose promotion to `## Stable Rules`.
+4. Regenerate or update this human-readable projection.
+5. After one MINOR release, propose promotion to `"stability": "stable"`.
 
 ## Versioning
 

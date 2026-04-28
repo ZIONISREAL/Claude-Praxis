@@ -1,10 +1,18 @@
 # PROJECT_STRUCTURE_SPEC.md
 
-Defines the mandatory project-level `.claude/` workspace.
+Defines the mandatory project-level Praxis workspace.
+
+## 0. Path Variables
+
+- `<repo>`: the repository or project root.
+- `<project-workspace>`: the project-local Praxis control plane. For Claude Code this is `<repo>/.claude/`; for Codex this is `<repo>/.codex/`.
+- `<runtime-home>`: the global runtime installation, such as `~/.claude/` or `~/.codex/`.
+
+Do not write root-style paths such as `/.claude/...`; they imply the filesystem root. Use `<project-workspace>/...` when describing project-local state.
 
 ## 1. Core Principle
 
-Every serious project must contain a project-local `.claude/` workspace.
+Every serious project must contain a project-local Praxis workspace.
 
 This workspace is the execution substrate for:
 
@@ -21,7 +29,7 @@ This workspace is the execution substrate for:
 ## 2. Mandatory Project Structure
 
 ```text
-<repo>/.claude/
+<project-workspace>/
 ├── WORKSPACE_INDEX.md
 ├── CLAUDE.md
 ├── constitution/

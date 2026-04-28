@@ -9,7 +9,7 @@ Mode classification is the entry gate to the protocol stack. LLMs systematically
 ## Location
 
 ```text
-<repo>/.claude/_meta/mode-decisions/<plan-id>.md
+<project-workspace>/_meta/mode-decisions/<plan-id>.md
 ```
 
 One file per plan. Created at task start, before any execution.

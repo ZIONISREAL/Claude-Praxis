@@ -9,6 +9,14 @@ Do not use this file for long explanations.
 
 **【读取确认指令】读完此文档后，必须立即在回复开头汇报：「✅ 已读取 SYSTEM_INDEX.md，本次执行将载入：[Tier A / A+B / A+B+C ...]」**
 
+## Path Variables
+
+- `<runtime-home>`: the global agent runtime directory, e.g. `~/.claude/` or `~/.codex/`
+- `<project-workspace>`: the project-local Praxis control plane, e.g. `<repo>/.claude/` or `<repo>/.codex/`
+- `<workspace>`: whichever Praxis workspace `praxis doctor` is currently checking
+
+Avoid root-style paths such as `/.claude/...`; they read as the filesystem root, not a project workspace.
+
 ## Tiered Read Sets
 
 Read only the tier required for the task. Most non-trivial tasks need only Tier A.
@@ -45,11 +53,24 @@ Read only the tier required for the task. Most non-trivial tasks need only Tier 
 
 After reading required global files, inspect:
 
-- `<repo>/.claude/WORKSPACE_INDEX.md`
+- `<project-workspace>/WORKSPACE_INDEX.md`
 
-If it does not exist and the task is non-trivial, create the project-local `.claude/` workspace according to `PROJECT_STRUCTURE_SPEC.md`.
+If it does not exist and the task is non-trivial, create the project-local workspace (`.claude/` for Claude Code, `.codex/` for Codex) according to `PROJECT_STRUCTURE_SPEC.md` and `CODEX_INTEGRATION.md`.
 
 ## Rule
 
 Read only what is needed for the current execution mode.
 Do not blindly load all global documents.
+
+When a task names a specific verification problem, prefer rule/section routing over whole-file reading:
+
+```yaml
+READ_RULES:
+  - praxis.closure.evidence-sha256-matches
+  - praxis.handoff.packet-exists
+READ_SECTIONS:
+  - VALIDATION_PROTOCOL.md §11
+  - VERIFICATION_PROTOCOL.md §4
+```
+
+If a rule ID is enough to execute safely, load `rules.json` and the named protocol section before reading the entire protocol file.

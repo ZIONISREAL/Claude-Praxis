@@ -28,7 +28,7 @@ Ensure the following are current:
 Append to:
 
 ```text
-<repo>/.claude/logs/compact-log.md
+<project-workspace>/logs/compact-log.md
 ```
 
 Include:

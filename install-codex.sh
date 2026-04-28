@@ -34,6 +34,7 @@ PROJECT_WORKSPACE_INDEX_TEMPLATE.md
 VERSION
 install-codex.sh
 praxis
+rules.json
 "
 
 REQUIRED_METRICS="
